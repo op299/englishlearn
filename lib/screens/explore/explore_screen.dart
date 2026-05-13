@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/learning_service.dart';
+import '../lessons/lessons_list_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -8,6 +10,17 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
+  late final LearningService _learningService;
+  late Future<List<TopicDto>> _topicsFuture;
+  String? _selectedLevel;
+
+  @override
+  void initState() {
+    super.initState();
+    _learningService = LearningService();
+    _topicsFuture = _learningService.fetchTopics();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,42 +42,104 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Featured Topics',
-                style: Theme.of(context).textTheme.titleLarge,
+                'Filter by Level',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 16),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                children: [
-                  _buildTopicCard(context, 'Business', Icons.business),
-                  _buildTopicCard(context, 'Travel', Icons.flight),
-                  _buildTopicCard(context, 'Technology', Icons.computer),
-                  _buildTopicCard(context, 'Food', Icons.restaurant),
-                ],
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: ['All', 'Beginner', 'Intermediate', 'Advanced'].map(
+                    (level) {
+                      final isSelected =
+                          _selectedLevel == null && level == 'All' ||
+                          _selectedLevel == level;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text(level),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedLevel = level == 'All' ? null : level;
+                              _topicsFuture = _learningService.fetchTopics(
+                                level: _selectedLevel,
+                              );
+                            });
+                          },
+                        ),
+                      );
+                    },
+                  ).toList(),
+                ),
               ),
               const SizedBox(height: 24),
               Text(
-                'Popular Collections',
+                'Available Topics',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: 5,
-                itemBuilder: (context, index) {
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      title: Text('Collection ${index + 1}'),
-                      subtitle: Text('${(index + 1) * 10} words'),
-                      trailing: const Icon(Icons.arrow_forward),
-                      onTap: () {},
-                    ),
+              FutureBuilder<List<TopicDto>>(
+                future: _topicsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error: ${snapshot.error}',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => setState(() {
+                              _topicsFuture = _learningService.fetchTopics(
+                                level: _selectedLevel,
+                              );
+                            }),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final topics = snapshot.data ?? [];
+
+                  if (topics.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: Text('No topics available'),
+                      ),
+                    );
+                  }
+
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    children: topics
+                        .map((topic) => _buildTopicCard(context, topic))
+                        .toList(),
                   );
                 },
               ),
@@ -75,17 +150,51 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Widget _buildTopicCard(BuildContext context, String title, IconData icon) {
+  Widget _buildTopicCard(BuildContext context, TopicDto topic) {
     return Card(
       elevation: 2,
       child: InkWell(
-        onTap: () {},
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  LessonsListScreen(topicId: topic.id, topicTitle: topic.title),
+            ),
+          );
+        },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: Colors.blue),
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Icon(Icons.book, size: 28, color: Colors.blue),
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                topic.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              topic.level,
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: Colors.grey[600]),
+            ),
           ],
         ),
       ),
