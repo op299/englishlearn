@@ -9,12 +9,9 @@ class LearningService {
   final AuthService _authService;
 
   LearningService({AuthService? authService})
-      : _authService = authService ?? AuthService();
+    : _authService = authService ?? AuthService();
 
-  Future<List<TopicDto>> fetchTopics({
-    String? level,
-    String? category,
-  }) async {
+  Future<List<TopicDto>> fetchTopics({String? level, String? category}) async {
     final token = await _authService.getAccessToken();
     if (token == null) throw Exception('No access token found');
 
@@ -101,16 +98,19 @@ class LearningService {
     required String lessonId,
     required List<AnswerPayloadDto> answers,
     required int timeSpentSeconds,
+    required double accuracy,
   }) async {
     final token = await _authService.getAccessToken();
     if (token == null) throw Exception('No access token found');
 
     final uri = Uri.parse(
-      ApiService.lessonSubmitEndpoint.replaceAll(
-        '{lesson_id}',
-        lessonId,
-      ),
+      ApiService.lessonSubmitEndpoint.replaceAll('{lesson_id}', lessonId),
     );
+
+    final requestBody = {'accuracy': accuracy, 'time_spent': timeSpentSeconds};
+
+    print('Submit Request: $requestBody');
+    print('Submit URI: $uri');
 
     final response = await http.post(
       uri,
@@ -118,14 +118,16 @@ class LearningService {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'answers': answers.map((e) => e.toJson()).toList(),
-        'time_spent_seconds': timeSpentSeconds,
-      }),
+      body: jsonEncode(requestBody),
     );
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to submit lesson: ${response.statusCode}');
+    print('Submit Response Status: ${response.statusCode}');
+    print('Submit Response Body: ${response.body}');
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception(
+        'Failed to submit lesson: ${response.statusCode} - ${response.body}',
+      );
     }
 
     final body = jsonDecode(response.body);
@@ -242,15 +244,12 @@ class AnswerPayloadDto {
   final String questionId;
   final String userAnswer;
 
-  AnswerPayloadDto({
-    required this.questionId,
-    required this.userAnswer,
-  });
+  AnswerPayloadDto({required this.questionId, required this.userAnswer});
 
   Map<String, dynamic> toJson() => {
-        'question_id': questionId,
-        'user_answer': userAnswer,
-      };
+    'question_id': questionId,
+    'user_answer': userAnswer,
+  };
 }
 
 class LessonSubmitResultDto {
@@ -281,4 +280,3 @@ class LessonSubmitResultDto {
     );
   }
 }
-

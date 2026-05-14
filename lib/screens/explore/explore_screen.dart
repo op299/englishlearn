@@ -14,6 +14,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
   late Future<List<TopicDto>> _topicsFuture;
   String? _selectedLevel;
 
+  // Map display labels to CEFR levels
+  final Map<String, String> levelMapping = {
+    'All': '',
+    'Beginner': 'A1',
+    'Intermediate': 'B1',
+    'Advanced': 'C1',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -53,7 +61,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     (level) {
                       final isSelected =
                           _selectedLevel == null && level == 'All' ||
-                          _selectedLevel == level;
+                          _selectedLevel == levelMapping[level];
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: FilterChip(
@@ -61,7 +69,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           selected: isSelected,
                           onSelected: (selected) {
                             setState(() {
-                              _selectedLevel = level == 'All' ? null : level;
+                              _selectedLevel = level == 'All'
+                                  ? null
+                                  : levelMapping[level];
                               _topicsFuture = _learningService.fetchTopics(
                                 level: _selectedLevel,
                               );

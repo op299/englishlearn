@@ -20,6 +20,7 @@ class _QuizScreenState extends State<QuizScreen> {
   late final LearningService _learningService;
   late Future<LessonDetailDto> _lessonDetailFuture;
   final Map<String, String> _selectedAnswers = {};
+  final Map<String, List<String>> _shuffledOptions = {};
   bool _isSubmitting = false;
   late DateTime _startTime;
 
@@ -27,7 +28,17 @@ class _QuizScreenState extends State<QuizScreen> {
   void initState() {
     super.initState();
     _learningService = LearningService();
-    _lessonDetailFuture = _learningService.fetchLessonDetail(widget.lessonId);
+    _lessonDetailFuture = _learningService
+        .fetchLessonDetail(widget.lessonId)
+        .then((lesson) {
+          // Shuffle options once when lesson is loaded
+          for (var question in lesson.questions) {
+            final options = [question.correctAnswer, ...question.distractors];
+            options.shuffle();
+            _shuffledOptions[question.id] = options;
+          }
+          return lesson;
+        });
     _startTime = DateTime.now();
   }
 
@@ -152,8 +163,10 @@ class _QuizScreenState extends State<QuizScreen> {
     int questionNumber,
     int totalQuestions,
   ) {
-    final options = [question.correctAnswer, ...question.distractors];
-    options.shuffle();
+    // Use pre-shuffled options to avoid re-shuffling on rebuild
+    final options =
+        _shuffledOptions[question.id] ??
+        [question.correctAnswer, ...question.distractors];
 
     return Card(
       margin: const EdgeInsets.only(bottom: 20),
@@ -279,19 +292,27 @@ class _QuizScreenState extends State<QuizScreen> {
 
     try {
       final timeSpent = DateTime.now().difference(_startTime).inSeconds;
-      final answers = lessonDetail.questions
-          .map(
-            (question) => AnswerPayloadDto(
-              questionId: question.id,
-              userAnswer: _selectedAnswers[question.id] ?? '',
-            ),
-          )
-          .toList();
+
+      // Calculate accuracy
+      int correctCount = 0;
+      final answers = lessonDetail.questions.map((question) {
+        final userAnswer = _selectedAnswers[question.id] ?? '';
+        final isCorrect = userAnswer == question.correctAnswer;
+        if (isCorrect) correctCount++;
+        return AnswerPayloadDto(
+          questionId: question.id,
+          userAnswer: userAnswer,
+        );
+      }).toList();
+
+      final accuracy = (correctCount / lessonDetail.questions.length * 100)
+          .toStringAsFixed(1);
 
       final result = await _learningService.submitLesson(
         lessonId: widget.lessonId,
         answers: answers,
         timeSpentSeconds: timeSpent,
+        accuracy: double.parse(accuracy),
       );
 
       if (mounted) {
