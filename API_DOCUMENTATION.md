@@ -1,664 +1,602 @@
 # 📚 LexiRise API - Tài Liệu Chi Tiết
 
-**Phiên Bản** (Version): 1.0.0  
-**Framework**: FastAPI  
-**Ngôn Ngữ** (Language): Python  
-**Cơ Sở Dữ Liệu** (Database): MySQL  
-**Xác Thực** (Authentication): JWT (JSON Web Token)  
+Một ứng dụng backend FastAPI để học tiếng Anh với hệ thống flashcard, tiến trình học tập, và quản lý cấp độ người dùng.
 
----
-
-## 📋 Mục Lục (Table of Contents)
+## 📋 Mục lục
 
 1. [Tổng Quan](#tổng-quan)
-2. [Cấu Hình Cơ Bản](#cấu-hình-cơ-bản)
-3. [Xác Thực](#xác-thực)
-4. [Endpoints Người Dùng](#endpoints-người-dùng)
-5. [Cấu Trúc Dữ Liệu](#cấu-trúc-dữ-liệu)
-6. [Mã Lỗi](#mã-lỗi)
+2. [Kiến Trúc Ứng Dụng](#kiến-trúc-ứng-dụng)
+3. [Cấu Trúc Cơ Sở Dữ Liệu](#cấu-trúc-cơ-sở-dữ-liệu)
+4. [API Endpoints](#api-endpoints)
+5. [Hướng Dẫn Sử Dụng](#hướng-dẫn-sử-dụng)
+6. [Cấu Hình Môi Trường](#cấu-hình-môi-trường)
 
 ---
 
 ## 🎯 Tổng Quan
 
-**LexiRise API** là một nền tảng backend để học tiếng Anh quản lý:
+**LexiRise API** là backend được xây dựng để hỗ trợ ứng dụng học tiếng Anh với các tính năng:
 
-- ✅ **Xác thực người dùng** (Đăng ký, Đăng nhập, Làm mới Token)
-- ✅ **Quản lý hồ sơ cá nhân** (Dashboard, Hồ Sơ, Cài Đặt)
-- ✅ **Hệ thống bảo mật** (Đổi Mật Khẩu, Đặt Lại Mật Khẩu)
-- ✅ **Theo dõi tiến độ** (XP, Chuỗi Ngày, Thành Thạo Từ Vựng)
-
----
-
-## 🔧 Cấu Hình Cơ Bản
-
-### URL Gốc (Base URL)
-```
-http://localhost:8000/api/v1
-```
-
-### Headers Bắt Buộc
-```json
-{
-  "Content-Type": "application/json",
-  "Authorization": "Bearer {access_token}"
-}
-```
-
-### Kiểm Tra Sức Khỏe (Health Check) - Không Cần Xác Thực
-```
-GET /health
-```
-
-**Phản Hồi (Response) - 200 OK**
-```json
-{
-  "status": "ok",
-  "app": "LexiRise API"
-}
-```
+- ✅ **Xác thực & Bảo mật**: Đăng ký, đăng nhập, JWT token, reset mật khẩu
+- ✅ **Quản lý Học tập**: 6 cấp độ CEFR (A1-C2), các chủ đề, bài học, flashcard
+- ✅ **Theo Dõi Tiến Trình**: Điểm XP, streak, tỷ lệ độ chính xác, thời gian học
+- ✅ **Hồ Sơ Người Dùng**: Cấu hình, thống kê, bảng xếp hạng
+- ✅ **Email Service**: Gửi email xác nhận, reset mật khẩu
 
 ---
 
-## 🔐 Xác Thực (Authentication)
+## 🏗️ Kiến Trúc Ứng Dụng
 
-### 1️⃣ Đăng Ký Người Dùng Mới (Register)
-
-**Endpoint:**
 ```
-POST /auth/register
+my-python-backend/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                 # Điểm khởi đầu, CORS, middleware
+│   ├── core/
+│   │   ├── config.py          # Cấu hình từ .env
+│   │   ├── database.py        # Kết nối database async
+│   │   ├── security.py        # JWT, password hashing
+│   │   └── dependencies.py    # Dependency injection
+│   ├── models/                 # SQLAlchemy ORM models
+│   │   ├── user.py            # Thông tin người dùng
+│   │   ├── user_meta.py       # Cấu hình & thống kê người dùng
+│   │   └── content.py         # Topic, Lesson, Question, UserProgress
+│   ├── schemas/                # Pydantic models (validation, serialization)
+│   │   ├── auth_schema.py
+│   │   ├── content_schema.py
+│   │   ├── user_schema.py
+│   │   └── progress_schema.py
+│   ├── routers/                # API routes
+│   │   ├── auth_router.py
+│   │   ├── content_router.py
+│   │   ├── user_router.py
+│   │   └── progress_router.py
+│   ├── services/               # Business logic
+│   │   ├── auth_service.py
+│   │   ├── content_service.py
+│   │   ├── user_service.py
+│   │   ├── progress_service.py
+│   │   └── email_service.py
+├── tests/
+├── .env                        # Cấu hình môi trường
+├── requirements.txt
+└── README.md
 ```
 
-**Mô Tả**: Tạo tài khoản mới với email, mật khẩu và thông tin cá nhân.
+### 🔄 Flow Dữ Liệu
 
-**Request Body (Yêu Cầu)**
-```json
+```
+Request → Router → Service → Database
+                       ↓
+          Response ← Schema validation
+```
+
+---
+
+## 📊 Cấu Trúc Cơ Sở Dữ Liệu
+
+### Users (Người Dùng)
+```
+users
+├── id (UUID)
+├── email (unique)
+├── password_hash
+├── full_name
+├── avatar_url
+├── daily_goal_minutes (mục tiêu hàng ngày)
+├── current_level (A1-C2)
+├── created_at
+├── updated_at
+```
+
+### Topics (Chủ Đề)
+```
+topics
+├── id (UUID)
+├── title (tên chủ đề)
+├── level (A1-C2)
+├── category (Vocabulary / Grammar)
+├── created_at
+└── lessons (relationship: 1 topic → N lessons)
+```
+
+### Lessons (Bài Học)
+```
+lessons
+├── id (UUID)
+├── topic_id (FK)
+├── order (thứ tự bài)
+├── xp_reward (100 XP)
+├── created_at
+├── questions (relationship: 1 lesson → N questions)
+└── progress_records (relationship: 1 lesson → N user progress)
+```
+
+### Questions (Flashcard/Câu Hỏi)
+```
+questions
+├── id (UUID)
+├── lesson_id (FK)
+├── word (từ vựng)
+├── context_sentence (câu ví dụ)
+├── correct_answer (đáp án)
+├── distractors (JSON: 3 đáp án sai)
+├── image_url
+└── created_at
+```
+
+### UserProgress (Tiến Trình Học)
+```
+user_progress
+├── user_id (FK) + lesson_id (FK) [Composite Primary Key]
+├── is_completed (hoàn thành?)
+├── accuracy (0-100%)
+├── time_spent_seconds
+├── last_studied_at
+└── needs_review (cần ôn tập?)
+```
+
+### UserSettings & UserStats
+```
+user_settings                 user_stats
+├── user_id (FK)              ├── user_id (FK)
+├── theme (light/dark)        ├── total_xp
+├── high_contrast_borders     ├── streak_count
+├── notifications_enabled     ├── last_active_date
+└── updated_at                ├── words_mastered_count
+                              └── updated_at
+```
+
+---
+
+## 🔌 API Endpoints
+
+### 🔐 Authentication (`/api/v1/auth`)
+
+#### 1. Đăng Ký
+```
+POST /api/v1/auth/register
+Content-Type: application/json
+
 {
   "email": "user@example.com",
-  "password": "StrongPassword123",
-  "full_name": "Nguyễn Văn A",
-  "daily_goal_minutes": 10,
-  "current_level": "A1"
+  "password": "SecurePassword123!",
+  "full_name": "Tên Người Dùng"
+}
+
+Response (201):
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "full_name": "Tên Người Dùng",
+  "created_at": "2024-05-13T10:30:00"
 }
 ```
 
-**Xác Thực Dữ Liệu (Validations)**
-| Trường (Field) | Kiểu (Type) | Yêu Cầu (Requirements) |
-|-------|------|-----------|
-| `email` | string | Email hợp lệ, duy nhất trong hệ thống |
-| `password` | string | 8-128 ký tự, tối thiểu 1 chữ hoa, 1 chữ thường, 1 chữ số |
-| `full_name` | string | 1-256 ký tự |
-| `daily_goal_minutes` | integer | Giá trị chấp nhận: 5, 10, 15 (mặc định: 10) |
-| `current_level` | string | Giá trị: A1, A2, B1, B2, C1, C2 (mặc định: A1) |
-
-**Phản Hồi - 201 Created**
-```json
+#### 2. Đăng Nhập
+```
+POST /api/v1/auth/login
 {
-  "user_id": "550e8400-e29b-41d4-a716-446655440000",
   "email": "user@example.com",
-  "full_name": "Nguyễn Văn A",
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "password": "SecurePassword123!"
+}
+
+Response (200):
+{
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "token_type": "bearer",
+  "expires_in": 86400
+}
+```
+
+#### 3. Refresh Token
+```
+POST /api/v1/auth/refresh
+{
+  "refresh_token": "token_here"
+}
+
+Response:
+{
+  "access_token": "new_token",
   "token_type": "bearer"
 }
 ```
 
-**Lỗi Có Thể Xảy Ra**
-```json
-{
-  "detail": "Email đã được đăng ký"
-}
+#### 4. Forgot Password
 ```
-
----
-
-### 2️⃣ Đăng Nhập (Login)
-
-**Endpoint:**
-```
-POST /auth/login
-```
-
-**Mô Tả**: Xác thực người dùng và nhận tokens truy cập.
-
-**Request Body (Yêu Cầu)**
-```json
-{
-  "email": "user@example.com",
-  "password": "StrongPassword123"
-}
-```
-
-**Phản Hồi - 200 OK**
-```json
-{
-  "user_id": "550e8400-e29b-41d4-a716-446655440000",
-  "email": "user@example.com",
-  "full_name": "Nguyễn Văn A",
-  "current_level": "A1",
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
-}
-```
-
-**Lỗi Có Thể Xảy Ra**
-```json
-{
-  "detail": "Email hoặc mật khẩu không chính xác"
-}
-```
-
----
-
-### 3️⃣ Làm Mới Access Token (Refresh Token)
-
-**Endpoint:**
-```
-POST /auth/refresh
-```
-
-**Mô Tả**: Tạo access token mới bằng refresh token (có hiệu lực trong 30 ngày).
-
-**Request Body (Yêu Cầu)**
-```json
-{
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-**Phản Hồi - 200 OK**
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
-}
-```
-
-**Thông Tin Hết Hạn (Expiration)**
-- Access Token: Có hiệu lực trong 24 giờ
-- Refresh Token: Có hiệu lực trong 30 ngày
-
----
-
-### 4️⃣ Quên Mật Khẩu (Forgot Password)
-
-**Endpoint:**
-```
-POST /auth/forgot-password
-```
-
-**Mô Tả**: Gửi email với liên kết để đặt lại mật khẩu.
-
-**Request Body (Yêu Cầu)**
-```json
+POST /api/v1/auth/forgot-password
 {
   "email": "user@example.com"
 }
-```
 
-**Phản Hồi - 200 OK**
-```json
+Response:
 {
-  "message": "Nếu email tồn tại trong hệ thống, bạn sẽ nhận được email với hướng dẫn đặt lại mật khẩu."
+  "message": "Email xác nhận đã được gửi"
 }
 ```
 
-**Ghi Chú**: Phản hồi giống nhau bất kể email có tồn tại hay không (để bảo vệ bảo mật).
-
----
-
-### 5️⃣ Đặt Lại Mật Khẩu (Reset Password)
-
-**Endpoint:**
+#### 5. Reset Password
 ```
-POST /auth/reset-password
-```
-
-**Mô Tả**: Đặt lại mật khẩu bằng token được gửi qua email.
-
-**Request Body (Yêu Cầu)**
-```json
+POST /api/v1/auth/reset-password
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "new_password": "NewPassword456"
+  "token": "reset_token_from_email",
+  "new_password": "NewPassword123!"
+}
+
+Response:
+{
+  "message": "Mật khẩu đã được đặt lại"
 }
 ```
 
-**Xác Thực Dữ Liệu**
-- Mật khẩu: 8-128 ký tự, tối thiểu 1 chữ hoa, 1 chữ thường, 1 chữ số
+#### 6. Verify Email
+```
+GET /api/v1/auth/verify-email?token=verification_token
 
-**Phản Hồi - 200 OK**
-```json
+Response:
 {
-  "message": "Mật khẩu đã được đặt lại thành công."
+  "message": "Email đã được xác thực"
 }
 ```
 
 ---
 
-### 6️⃣ Lấy Thông Tin Người Dùng Hiện Tại (Get Current User)
+### 📚 Learning (`/api/v1/learning`)
 
-**Endpoint:**
+#### 1. Lấy Danh Sách Chủ Đề
 ```
-GET /auth/me
-```
+GET /api/v1/learning/topics?level=A1&category=Vocabulary
 
-**Mô Tả**: Kiểm tra xem token có hợp lệ không và lấy thông tin cơ bản của người dùng.
+Query Parameters:
+- level: A1, A2, B1, B2, C1, C2 (optional)
+- category: Vocabulary, Grammar (optional)
 
-**Headers Bắt Buộc**
-```
-Authorization: Bearer {access_token}
-```
-
-**Phản Hồi - 200 OK**
-```json
+Response:
 {
-  "user_id": "550e8400-e29b-41d4-a716-446655440000",
-  "email": "user@example.com",
-  "full_name": "Nguyễn Văn A",
-  "current_level": "A1"
-}
-```
-
-**Lỗi Có Thể Xảy Ra**
-```json
-{
-  "detail": "Không có token được cung cấp"
-}
-```
-
-```json
-{
-  "detail": "Token không hợp lệ hoặc đã hết hạn"
-}
-```
-
----
-
-## 👤 Endpoints Người Dùng (User Endpoints)
-
-> ⚠️ **Tất cả các endpoint người dùng yêu cầu xác thực (Bearer Token)**
-
-### 1️⃣ Lấy Dashboard
-
-**Endpoint:**
-```
-GET /user/dashboard
-```
-
-**Mô Tả**: Lấy thông tin tóm tắt tiến độ học tập của ngày hôm nay.
-
-**Headers Bắt Buộc**
-```
-Authorization: Bearer {access_token}
-```
-
-**Phản Hồi - 200 OK**
-```json
-{
-  "streak": 5,
-  "today_xp": 150,
-  "total_xp": 2450,
-  "daily_goal_minutes": 10,
-  "message": "Tuyệt vời! Bạn đang duy trì chuỗi ngày học tập của mình!"
-}
-```
-
-**Giải Thích Các Trường (Fields Explanation)**
-| Trường (Field) | Mô Tả (Description) |
-|-------|-----------|
-| `streak` | Số ngày liên tiếp học tập |
-| `today_xp` | Điểm kinh nghiệm (XP) kiếm được hôm nay |
-| `total_xp` | Tổng điểm kinh nghiệm tích lũy |
-| `daily_goal_minutes` | Mục tiêu hàng ngày tính bằng phút |
-| `message` | Thông điệp động viên (tùy chọn) |
-
----
-
-### 2️⃣ Lấy Hồ Sơ Người Dùng (Get User Profile)
-
-**Endpoint:**
-```
-GET /user/profile
-```
-
-**Mô Tả**: Lấy thông tin đầy đủ về hồ sơ người dùng.
-
-**Headers Bắt Buộc**
-```
-Authorization: Bearer {access_token}
-```
-
-**Phản Hồi - 200 OK**
-```json
-{
-  "email": "user@example.com",
-  "full_name": "Nguyễn Văn A",
-  "avatar_url": "https://api.example.com/avatars/user123.jpg",
-  "current_level": "A1",
-  "total_xp": 2450,
-  "streak": 5,
-  "words_mastered": 127,
-  "total_words": 5000,
-  "mastery_ratio": 0.0254
-}
-```
-
-**Giải Thích Các Trường (Fields Explanation)**
-| Trường (Field) | Mô Tả (Description) |
-|-------|-----------|
-| `email` | Email của người dùng |
-| `full_name` | Họ và tên đầy đủ |
-| `avatar_url` | URL ảnh đại diện (có thể là null) |
-| `current_level` | Trình độ tiếng Anh hiện tại (A1-C2) |
-| `total_xp` | Tổng điểm kinh nghiệm tích lũy |
-| `streak` | Số ngày liên tiếp |
-| `words_mastered` | Số từ vựng mà người dùng đã thành thạo |
-| `total_words` | Tổng số từ vựng trong hệ thống |
-| `mastery_ratio` | Tỷ lệ từ vựng đã thành thạo (0-1) |
-
----
-
-### 3️⃣ Cập Nhật Cài Đặt Người Dùng (Update Settings)
-
-**Endpoint:**
-```
-PATCH /user/settings
-```
-
-**Mô Tả**: Cập nhật các cài đặt tùy chọn của người dùng.
-
-**Headers Bắt Buộc**
-```
-Authorization: Bearer {access_token}
-```
-
-**Request Body (Yêu Cầu)**
-```json
-{
-  "daily_goal_minutes": 15,
-  "theme": "dark"
-}
-```
-
-**Xác Thực Dữ Liệu (Validations)**
-| Trường (Field) | Kiểu (Type) | Yêu Cầu (Requirements) |
-|-------|------|-----------|
-| `daily_goal_minutes` | integer (tùy chọn) | Tối thiểu: 5, Tối đa: 60 |
-| `theme` | string (tùy chọn) | Giá trị: "light", "dark" |
-
-**Phản Hồi - 200 OK**
-```json
-{
-  "message": "Cài đặt đã được cập nhật thành công",
-  "daily_goal_minutes": 15,
-  "theme": "dark"
-}
-```
-
----
-
-### 4️⃣ Đổi Mật Khẩu (Change Password)
-
-**Endpoint:**
-```
-PUT /user/security
-```
-
-**Mô Tả**: Thay đổi mật khẩu của người dùng (yêu cầu mật khẩu hiện tại).
-
-**Headers Bắt Buộc**
-```
-Authorization: Bearer {access_token}
-```
-
-**Request Body (Yêu Cầu)**
-```json
-{
-  "old_password": "OldPassword123",
-  "new_password": "NewPassword456",
-  "confirm_password": "NewPassword456"
-}
-```
-
-**Xác Thực Dữ Liệu (Validations)**
-| Trường (Field) | Yêu Cầu (Requirements) |
-|-------|-----------|
-| `old_password` | Phải chính xác (sẽ được xác minh) |
-| `new_password` | 8-128 ký tự, tối thiểu 1 chữ hoa, 1 chữ thường, 1 chữ số |
-| `confirm_password` | Phải giống hệt `new_password` |
-
-**Phản Hồi - 200 OK**
-```json
-{
-  "message": "Mật khẩu đã được thay đổi thành công"
-}
-```
-
-**Lỗi Có Thể Xảy Ra**
-```json
-{
-  "detail": "Mật khẩu cũ không chính xác"
-}
-```
-
-```json
-{
-  "detail": "Mật khẩu không khớp nhau"
-}
-```
-
----
-
-## 📊 Cấu Trúc Dữ Liệu (Data Models)
-
-### Model: User (Người Dùng)
-
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "email": "user@example.com",
-  "password_hash": "hashed_password",
-  "full_name": "Nguyễn Văn A",
-  "avatar_url": "https://api.example.com/avatars/user123.jpg",
-  "daily_goal_minutes": 10,
-  "current_level": "A1",
-  "created_at": "2024-01-15T10:30:00Z",
-  "updated_at": "2024-01-15T15:45:30Z"
-}
-```
-
-### Model: UserSettings (Cài Đặt Người Dùng)
-
-```json
-{
-  "user_id": "550e8400-e29b-41d4-a716-446655440000",
-  "theme": "light",
-  "high_contrast_borders": false,
-  "notifications_enabled": true,
-  "updated_at": "2024-01-15T15:45:30Z"
-}
-```
-
-### Model: UserStats (Thống Kê Người Dùng)
-
-```json
-{
-  "user_id": "550e8400-e29b-41d4-a716-446655440000",
-  "total_xp": 2450,
-  "streak_count": 5,
-  "last_active_date": "2024-01-15",
-  "words_mastered_count": 127,
-  "updated_at": "2024-01-15T15:45:30Z"
-}
-```
-
-### Enum: Trình Độ Tiếng Anh (English Levels)
-
-```
-A1 - Elementary (Beginner) - Sơ Cấp (Người Mới Bắt Đầu)
-A2 - Elementary (Pre-Intermediate) - Sơ Cấp (Trung Gian Sơ)
-B1 - Intermediate - Trung Bình
-B2 - Upper Intermediate - Trung Bình Trên
-C1 - Advanced - Nâng Cao
-C2 - Proficiency - Thành Thạo Hoàn Toàn
-```
-
----
-
-## ❌ Mã Lỗi (Error Codes)
-
-### Mã HTTP Chung (General HTTP Status Codes)
-
-| Mã (Code) | Mô Tả (Description) |
-|--------|-----------|
-| 200 | OK - Yêu cầu thành công |
-| 201 | Created - Tài nguyên được tạo thành công |
-| 400 | Bad Request - Dữ liệu không hợp lệ |
-| 401 | Unauthorized - Token không có hoặc không hợp lệ |
-| 403 | Forbidden - Không có quyền truy cập |
-| 404 | Not Found - Không tìm thấy tài nguyên |
-| 409 | Conflict - Xung đột (ví dụ: email đã được đăng ký) |
-| 422 | Unprocessable Entity - Xác thực không thành công |
-| 500 | Internal Server Error - Lỗi máy chủ |
-
-### Ví Dụ Lỗi Xác Thực (Validation Error Example)
-
-```json
-{
-  "detail": [
+  "topics": [
     {
-      "loc": ["body", "email"],
-      "msg": "invalid email format",
-      "type": "value_error.email"
+      "id": "uuid",
+      "title": "Business Negotiation",
+      "level": "B1",
+      "category": "Vocabulary",
+      "created_at": "2024-05-13T10:30:00"
+    }
+  ],
+  "total": 10
+}
+```
+
+#### 2. Lấy Bài Học của Chủ Đề
+```
+GET /api/v1/learning/topics/{topic_id}/lessons
+
+Response:
+{
+  "lessons": [
+    {
+      "id": "uuid",
+      "topic_id": "uuid",
+      "order": 1,
+      "xp_reward": 100,
+      "completed": false
+    }
+  ],
+  "total": 15
+}
+```
+
+#### 3. Chi Tiết Bài Học
+```
+GET /api/v1/learning/lessons/{lesson_id}
+
+Response:
+{
+  "id": "uuid",
+  "topic_id": "uuid",
+  "xp_reward": 100,
+  "questions": [
+    {
+      "id": "uuid",
+      "word": "negotiate",
+      "context_sentence": "We need to negotiate the contract terms",
+      "correct_answer": "thương lượng",
+      "distractors": ["thảo luận", "đề xuất", "yêu cầu"],
+      "image_url": "https://..."
     }
   ]
 }
 ```
 
-### Ví Dụ Lỗi Xác Thực (Authentication Error Example)
+---
 
-```json
+### 👤 User (`/api/v1/user`)
+
+#### 1. Lấy Dashboard
+```
+GET /api/v1/user/dashboard
+Authorization: Bearer {access_token}
+
+Response:
 {
-  "detail": "Token không hợp lệ hoặc đã hết hạn"
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "full_name": "Tên",
+    "current_level": "B1"
+  },
+  "stats": {
+    "total_xp": 5000,
+    "streak_count": 15,
+    "words_mastered": 250,
+    "ranking": "Top 5%"
+  },
+  "recent_lessons": [...]
+}
+```
+
+#### 2. Lấy Hồ Sơ
+```
+GET /api/v1/user/profile
+Authorization: Bearer {access_token}
+
+Response:
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "full_name": "Tên Người Dùng",
+  "avatar_url": "https://...",
+  "current_level": "B1",
+  "daily_goal_minutes": 30,
+  "settings": {
+    "theme": "dark",
+    "notifications": true
+  }
+}
+```
+
+#### 3. Cập Nhật Cài Đặt
+```
+PATCH /api/v1/user/settings
+Authorization: Bearer {access_token}
+{
+  "theme": "dark",
+  "high_contrast_borders": false,
+  "notifications_enabled": true
+}
+
+Response: 200 OK
+```
+
+#### 4. Đổi Mật Khẩu
+```
+PUT /api/v1/user/security
+Authorization: Bearer {access_token}
+{
+  "current_password": "OldPassword123!",
+  "new_password": "NewPassword123!"
+}
+
+Response: 200 OK
+```
+
+---
+
+### 📊 Progress (`/api/v1/lessons`)
+
+#### 1. Nộp Bài Học
+```
+POST /api/v1/lessons/{lesson_id}/submit
+Authorization: Bearer {access_token}
+
+{
+  "answers": [
+    {"question_id": "uuid", "user_answer": "thương lượng"},
+    {"question_id": "uuid", "user_answer": "đàm phán"}
+  ],
+  "time_spent_seconds": 300
+}
+
+Response:
+{
+  "lesson_id": "uuid",
+  "accuracy": 85.5,
+  "xp_earned": 100,
+  "new_total_xp": 5100,
+  "is_completed": true,
+  "next_lesson": "uuid or null"
 }
 ```
 
 ---
 
-## 🚀 Luồng Xác Thực Được Khuyến Nghị (Recommended Authentication Flow)
+## 🚀 Hướng Dẫn Sử Dụng
 
-```
-1. [Frontend] Đăng nhập với email và mật khẩu
-   ↓
-2. [Backend] Trả về access_token và refresh_token
-   ↓
-3. [Frontend] Lưu trữ tokens trong localStorage/sessionStorage
-   ↓
-4. [Frontend] Sử dụng access_token trong mỗi yêu cầu (Authorization header)
-   ↓
-5. Nếu access_token hết hạn (401):
-   ├─ [Frontend] Sử dụng refresh_token để lấy access_token mới
-   ├─ [Backend] Trả về access_token mới
-   └─ [Frontend] Thử lại yêu cầu trước đó
-   ↓
-6. Nếu refresh_token hết hạn:
-   └─ [Frontend] Chuyển hướng đến trang đăng nhập
+### 1. Khởi Động Server
+```bash
+# Kích hoạt virtual environment (nếu chưa)
+venv\Scripts\activate
+
+# Chạy development server
+python -m uvicorn app.main:app --reload
 ```
 
----
+Server chạy tại: `http://localhost:8000`
 
-## 📱 Ví Dụ Tích Hợp (Integration Examples)
+### 2. Truy Cập API Docs
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
 
-### JavaScript/TypeScript
-
-```javascript
-// Đăng nhập (Login)
-const response = await fetch('http://localhost:8000/api/v1/auth/login', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    email: 'user@example.com',
-    password: 'StrongPassword123'
-  })
-});
-
-const data = await response.json();
-localStorage.setItem('access_token', data.access_token);
-localStorage.setItem('refresh_token', data.refresh_token);
-
-// Sử dụng token trong yêu cầu (Using token in request)
-const dashboardResponse = await fetch(
-  'http://localhost:8000/api/v1/user/dashboard',
-  {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-    }
-  }
-);
+### 3. Kiểm Tra Health
+```bash
+curl http://localhost:8000/health
+# Response: {"status": "ok", "app": "LexiRise API"}
 ```
 
-### Python
+### 4. Ví Dụ Quy Trình Học
+```bash
+# 1. Đăng ký
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "student@example.com",
+    "password": "MyPassword123!",
+    "full_name": "John Doe"
+  }'
 
-```python
-import requests
+# 2. Đăng nhập
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "student@example.com",
+    "password": "MyPassword123!"
+  }'
+# Lưu access_token từ response
 
-# Đăng nhập (Login)
-response = requests.post(
-    'http://localhost:8000/api/v1/auth/login',
-    json={
-        'email': 'user@example.com',
-        'password': 'StrongPassword123'
-    }
-)
+# 3. Lấy danh sách chủ đề
+curl http://localhost:8000/api/v1/learning/topics \
+  -H "Authorization: Bearer {access_token}"
 
-tokens = response.json()
-access_token = tokens['access_token']
+# 4. Lấy chi tiết bài học
+curl http://localhost:8000/api/v1/learning/lessons/{lesson_id} \
+  -H "Authorization: Bearer {access_token}"
 
-# Lấy Dashboard (Get Dashboard)
-dashboard = requests.get(
-    'http://localhost:8000/api/v1/user/dashboard',
-    headers={'Authorization': f'Bearer {access_token}'}
-)
-print(dashboard.json())
+# 5. Nộp bài học
+curl -X POST http://localhost:8000/api/v1/lessons/{lesson_id}/submit \
+  -H "Authorization: Bearer {access_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "answers": [...],
+    "time_spent_seconds": 300
+  }'
 ```
 
 ---
 
-## 🔒 Bảo Mật (Security)
+## ⚙️ Cấu Hình Môi Trường
 
-### Các Biện Pháp Bảo Mật Đã Triển Khai (Implemented Security Measures)
+### Tệp `.env`
+```env
+# App
+APP_NAME=LexiRise API
+DEBUG=false
 
-- ✅ Mật khẩu được mã hóa bằng bcrypt
-- ✅ JWT cho xác thực không lưu trữ trạng thái (stateless)
-- ✅ CORS được bật (Cần điều chỉnh cho môi trường sản xuất)
-- ✅ Xác thực đầu vào bằng Pydantic
-- ✅ Token reset mật khẩu có thời gian hết hạn
-- ✅ Giới hạn tốc độ được khuyến nghị (cần triển khai cho sản xuất)
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=1234
+DB_NAME=lexirise
 
-### Khuyến Nghị Cho Môi Trường Sản Xuất (Production Recommendations)
+# JWT
+JWT_SECRET_KEY=your-secret-key-here
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+REFRESH_TOKEN_EXPIRE_DAYS=30
 
-- ⚠️ Thay đổi `JWT_SECRET_KEY` trong `.env`
-- ⚠️ Cấu hình `RESET_PASSWORD_URL` chính xác
-- ⚠️ Sử dụng HTTPS trong sản xuất
-- ⚠️ Triển khai giới hạn tốc độ
-- ⚠️ Sử dụng biến môi trường cho thông tin xác thực
-- ⚠️ Cấu hình CORS với nguồn gốc cụ thể
+# Email SMTP
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+EMAIL_FROM=your-email@gmail.com
+
+# Frontend URL
+RESET_PASSWORD_URL=http://localhost:3000/reset-password
+```
 
 ---
 
-## 📞 Hỗ Trợ và Liên Hệ (Support and Contact)
+## 🛠️ Công Nghệ Sử Dụng
 
-Để có thêm thông tin về API, hãy kiểm tra:
-1. Tài liệu này
-2. Mã nguồn trong `app/routers/`
-3. Swagger UI có sẵn tại `/docs`
-4. ReDoc có sẵn tại `/redoc`
+| Layer | Công Nghệ |
+|-------|-----------|
+| **Framework** | FastAPI 0.115.0 |
+| **Server** | Uvicorn 0.30.6 |
+| **Database** | MySQL/MariaDB + SQLAlchemy 2.0.35 |
+| **Async DB** | aiomysql 0.2.0 |
+| **Validation** | Pydantic 2.9.2 |
+| **Auth** | JWT (python-jose) + bcrypt |
+| **Email** | aiosmtplib 3.0.1 |
 
 ---
 
-**Cập nhật lần cuối** (Last Update): 5 tháng 5 năm 2026  
-**Trạng thái** (Status): Đang Phát Triển (In Development)
+## 📝 Quy Tắc Mã Hóa
+
+### Response Format
+Tất cả API responses tuân theo định dạng:
+```json
+{
+  "data": {...},
+  "status": "success|error",
+  "message": "Chi tiết (nếu có)"
+}
+```
+
+### Error Handling
+```json
+{
+  "status": "error",
+  "detail": "Mô tả lỗi",
+  "code": "ERROR_CODE"
+}
+```
+
+### HTTP Status Codes
+- `200`: OK
+- `201`: Created
+- `400`: Bad Request
+- `401`: Unauthorized
+- `403`: Forbidden
+- `404`: Not Found
+- `500`: Server Error
+
+---
+
+## 🔒 Bảo Mật
+
+✅ **JWT Token**: Access token hết hạn sau 24 giờ, refresh token sau 30 ngày
+✅ **Password Hashing**: Bcrypt với 12 rounds
+✅ **CORS**: Mở cho tất cả origins (có thể hạn chế)
+✅ **Email Verification**: Xác nhận email khi đăng ký
+✅ **Reset Password**: Token hết hạn sau 24 giờ
+
+---
+
+## 📊 Thống Kê & Tính Năng
+
+### Cấp Độ CEFR
+- **A1**: Người mới bắt đầu
+- **A2**: Sơ cấp
+- **B1**: Trung cấp
+- **B2**: Trung cấp cao
+- **C1**: Nâng cao
+- **C2**: Thành thạo
+
+### Hệ Thống Điểm
+- Mỗi bài học: **100 XP**
+- Streak hàng ngày: Bonus XP
+- Bảng xếp hạng dựa trên tổng XP
+
+### Theo Dõi Tiến Trình
+- **Accuracy**: Tỷ lệ đáp án đúng
+- **Time Spent**: Thời gian học tập
+- **Streak**: Số ngày học liên tiếp
+- **Words Mastered**: Từ vựng đã thành thạo
+
+---
+
+## 📞 Liên Hệ & Hỗ Trợ
+
+Nếu có vấn đề, vui lòng:
+1. Kiểm tra logs trong terminal
+2. Xem file `.env` có cấu hình đúng không
+3. Đảm bảo MySQL đang chạy
+4. Kiểm tra database connection
+
+---
+
+**Phiên Bản**: 1.0.0  
+**Cập Nhật**: Tháng 5, 2026  
+**Tác Giả**: LexiRise Team

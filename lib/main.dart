@@ -1,13 +1,16 @@
+import 'package:englishlearn/screens/auth/onboarding_screen.dart' show OnboardingScreen;
+import 'package:englishlearn/widgets/main_navigation_shell.dart' show MainNavigationShell;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'services/theme_service.dart';
+import 'package:shared_preferences/shared_preferences.dart' show SharedPreferences;
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
-import 'screens/auth/forgot_password_screen.dart';
-import 'screens/auth/onboarding_screen.dart';
+import 'screens/lessons/lessons_list_screen.dart';
+import 'screens/lessons/quiz_screen.dart';
+import 'screens/explore/explore_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/settings/settings_screen.dart';
-import 'widgets/main_navigation_shell.dart';
+import 'services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,8 +97,38 @@ class MyApp extends StatelessWidget {
             '/profile': (context) => const ProfileScreen(),
             '/settings': (context) => const SettingsScreen(),
           },
+          onGenerateRoute: (RouteSettings settings) {
+            if (settings.name?.startsWith('/lessons/') ?? false) {
+              final parts = settings.name!.split('/');
+              if (parts.length == 4 && parts[1] == 'lessons') {
+                final topicId = parts[2];
+                final topicTitle = Uri.decodeComponent(parts[3]);
+                return MaterialPageRoute(
+                  builder: (context) => LessonsListScreen(
+                    topicId: topicId,
+                    topicTitle: topicTitle,
+                  ),
+                );
+              }
+            }
+
+            if (settings.name?.startsWith('/quiz/') ?? false) {
+              final parts = settings.name!.split('/');
+              if (parts.length == 4 && parts[1] == 'quiz') {
+                final lessonId = parts[2];
+                final lessonOrder = int.tryParse(parts[3]) ?? 0;
+                return MaterialPageRoute(
+                  builder: (context) =>
+                      QuizScreen(lessonId: lessonId, lessonOrder: lessonOrder),
+                );
+              }
+            }
+
+            return null;
+          },
         );
       },
     );
   }
 }
+
