@@ -1,5 +1,5 @@
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.101:8000/api/v1';
+  static const String baseUrl = 'http://192.168.1.104:8000/api/v1';
 
   // Auth endpoints
   static const String registerEndpoint = '$baseUrl/auth/register';

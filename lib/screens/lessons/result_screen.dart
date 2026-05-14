@@ -43,10 +43,7 @@ class _ResultScreenState extends State<ResultScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isPass = widget.result.accuracy >= 0.7;
-    final accuracyPercentage = (widget.result.accuracy * 100).toStringAsFixed(
-      1,
-    );
+    final isPass = widget.result.xpEarned > 0;
 
     return WillPopScope(
       onWillPop: () async => false,
@@ -111,7 +108,7 @@ class _ResultScreenState extends State<ResultScreen>
                   ),
                 ),
                 const SizedBox(height: 32),
-                _buildResultCard(context, accuracyPercentage),
+                _buildResultCard(context),
                 const SizedBox(height: 32),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -157,7 +154,7 @@ class _ResultScreenState extends State<ResultScreen>
     );
   }
 
-  Widget _buildResultCard(BuildContext context, String accuracyPercentage) {
+  Widget _buildResultCard(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
@@ -176,13 +173,6 @@ class _ResultScreenState extends State<ResultScreen>
         children: [
           _buildResultRow(
             context,
-            'Accuracy',
-            '$accuracyPercentage%',
-            Icons.tablet,
-          ),
-          const Divider(height: 20),
-          _buildResultRow(
-            context,
             'XP Earned',
             '+${widget.result.xpEarned}',
             Icons.star,
@@ -191,18 +181,26 @@ class _ResultScreenState extends State<ResultScreen>
           const Divider(height: 20),
           _buildResultRow(
             context,
-            'Total XP',
-            widget.result.newTotalXp.toString(),
-            Icons.trending_up,
-            color: Colors.green,
+            'Current Streak',
+            '${widget.result.currentStreak}',
+            Icons.local_fire_department,
+            color: Colors.red,
           ),
           const Divider(height: 20),
           _buildResultRow(
             context,
-            'Status',
-            widget.result.isCompleted ? 'Completed' : 'Incomplete',
-            Icons.flag,
-            color: widget.result.isCompleted ? Colors.green : Colors.grey,
+            'Mastered Words',
+            '${widget.result.masteredWords}',
+            Icons.emoji_events,
+            color: Colors.amber,
+          ),
+          const Divider(height: 20),
+          _buildResultRow(
+            context,
+            'Ranking',
+            widget.result.ranking,
+            Icons.trending_up,
+            color: Colors.green,
           ),
         ],
       ),

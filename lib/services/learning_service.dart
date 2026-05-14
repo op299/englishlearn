@@ -107,7 +107,11 @@ class LearningService {
       ApiService.lessonSubmitEndpoint.replaceAll('{lesson_id}', lessonId),
     );
 
-    final requestBody = {'accuracy': accuracy, 'time_spent': timeSpentSeconds};
+    final requestBody = {
+      'accuracy': accuracy,
+      'time_spent': timeSpentSeconds,
+      'answers': answers.map((a) => a.toJson()).toList(),
+    };
 
     print('Submit Request: $requestBody');
     print('Submit URI: $uri');
@@ -253,27 +257,33 @@ class AnswerPayloadDto {
 }
 
 class LessonSubmitResultDto {
-  final String lessonId;
-  final double accuracy;
   final int xpEarned;
+  final int currentStreak;
+  final int masteredWords;
+  final String ranking;
+  final double accuracy;
   final int newTotalXp;
   final bool isCompleted;
   final String? nextLesson;
 
   LessonSubmitResultDto({
-    required this.lessonId,
-    required this.accuracy,
     required this.xpEarned,
-    required this.newTotalXp,
-    required this.isCompleted,
-    required this.nextLesson,
+    required this.currentStreak,
+    required this.masteredWords,
+    required this.ranking,
+    this.accuracy = 0.0,
+    this.newTotalXp = 0,
+    this.isCompleted = false,
+    this.nextLesson,
   });
 
   factory LessonSubmitResultDto.fromJson(Map<String, dynamic> json) {
     return LessonSubmitResultDto(
-      lessonId: (json['lesson_id'] ?? '').toString(),
+      xpEarned: (json['earned_xp'] ?? 0) as int,
+      currentStreak: (json['current_streak'] ?? 0) as int,
+      masteredWords: (json['mastered_words'] ?? 0) as int,
+      ranking: (json['ranking'] ?? '').toString(),
       accuracy: (json['accuracy'] ?? 0).toDouble(),
-      xpEarned: (json['xp_earned'] ?? 0) as int,
       newTotalXp: (json['new_total_xp'] ?? 0) as int,
       isCompleted: (json['is_completed'] ?? false) as bool,
       nextLesson: json['next_lesson']?.toString(),
