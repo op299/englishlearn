@@ -88,8 +88,8 @@ class _LessonsListScreenState extends State<LessonsListScreen> {
           height: 50,
           decoration: BoxDecoration(
             color: lesson.completed
-                ? Colors.green.withOpacity(0.2)
-                : Colors.blue.withOpacity(0.2),
+                ? Colors.green.withValues(alpha: 0.2)
+                : Colors.blue.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Center(

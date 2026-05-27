@@ -1,15 +1,18 @@
-import 'package:englishlearn/screens/auth/onboarding_screen.dart' show OnboardingScreen;
-import 'package:englishlearn/widgets/main_navigation_shell.dart' show MainNavigationShell;
+import 'package:englishlearn/screens/auth/onboarding_screen.dart'
+    show OnboardingScreen;
+import 'package:englishlearn/widgets/main_navigation_shell.dart'
+    show MainNavigationShell;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart' show SharedPreferences;
-import 'screens/auth/forgot_password_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart'
+    show SharedPreferences;
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/auth/reset_password_screen.dart';
 import 'screens/lessons/lessons_list_screen.dart';
 import 'screens/lessons/quiz_screen.dart';
-import 'screens/explore/explore_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'services/auth_service.dart';
 import 'services/theme_service.dart';
 
 void main() async {
@@ -44,10 +47,20 @@ class MyApp extends StatelessWidget {
   Future<String> _getInitialRoute() async {
     final prefs = await SharedPreferences.getInstance();
     final hasSeenOnboarding = prefs.getBool('onboarding_seen') ?? false;
-    final isLoggedIn = prefs.getString('access_token') != null;
+    final hasAccessToken = prefs.getString('access_token') != null;
+    final hasRefreshToken = prefs.getString('refresh_token') != null;
 
-    if (isLoggedIn) {
-      return '/home';
+    if (hasAccessToken || hasRefreshToken) {
+      final authService = AuthService();
+      try {
+        if (!hasAccessToken && hasRefreshToken) {
+          await authService.refreshAccessToken();
+        }
+        await authService.getCurrentUser();
+        return '/home';
+      } catch (_) {
+        await authService.clearTokens();
+      }
     }
 
     if (!hasSeenOnboarding) {
@@ -92,7 +105,6 @@ class MyApp extends StatelessWidget {
             '/onboarding': (context) => const OnboardingScreen(),
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),
-            '/forgot-password': (context) => const ForgotPasswordScreen(),
             '/home': (context) => const MainNavigationShell(),
             '/profile': (context) => const ProfileScreen(),
             '/settings': (context) => const SettingsScreen(),
@@ -110,6 +122,18 @@ class MyApp extends StatelessWidget {
                   ),
                 );
               }
+            }
+
+            if (settings.name?.startsWith('/reset-password') ?? false) {
+              final uri = Uri.parse(settings.name!);
+              final token =
+                  uri.queryParameters['token'] ??
+                  (settings.arguments is String
+                      ? settings.arguments as String
+                      : '');
+              return MaterialPageRoute(
+                builder: (context) => ResetPasswordScreen(token: token),
+              );
             }
 
             if (settings.name?.startsWith('/quiz/') ?? false) {
@@ -131,4 +155,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-

@@ -11,23 +11,50 @@ class LearningService {
   LearningService({AuthService? authService})
     : _authService = authService ?? AuthService();
 
-  Future<List<TopicDto>> fetchTopics({String? level, String? category}) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) throw Exception('No access token found');
+  Future<ExploreDto> fetchExplore({String? query, String? level}) async {
+    final queryParameters = <String, String>{};
+    if (query != null && query.trim().isNotEmpty) {
+      queryParameters['q'] = query.trim();
+    }
+    if (level != null && level.isNotEmpty) {
+      queryParameters['level'] = level;
+    }
 
-    final uri = Uri.parse(ApiService.learningTopicsEndpoint).replace(
-      queryParameters: {
-        if (level != null) 'level': level,
-        if (category != null) 'category': category,
-      },
+    final uri = Uri.parse(ApiService.learningExploreEndpoint).replace(
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _authService.sendAuthenticatedRequest(
+      (headers) => http.get(uri, headers: headers),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load explore: ${response.statusCode}');
+    }
+
+    return ExploreDto.fromJson(jsonDecode(response.body));
+  }
+
+  Future<List<TopicDto>> fetchTopics({
+    String? level,
+    String? category,
+    String? query,
+  }) async {
+    final queryParameters = <String, String>{};
+    if (level != null && level.isNotEmpty) queryParameters['level'] = level;
+    if (category != null && category.isNotEmpty) {
+      queryParameters['category'] = category;
+    }
+    if (query != null && query.trim().isNotEmpty) {
+      queryParameters['q'] = query.trim();
+    }
+
+    final uri = Uri.parse(ApiService.learningTopicsEndpoint).replace(
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    );
+
+    final response = await _authService.sendAuthenticatedRequest(
+      (headers) => http.get(uri, headers: headers),
     );
 
     if (response.statusCode != 200) {
@@ -36,13 +63,12 @@ class LearningService {
 
     final body = jsonDecode(response.body);
     final list = (body['topics'] as List?) ?? [];
-    return list.map((e) => TopicDto.fromJson(e)).toList();
+    return list
+        .map((topic) => TopicDto.fromJson(topic as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<LessonDto>> fetchLessonsByTopic(String topicId) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) throw Exception('No access token found');
-
     final uri = Uri.parse(
       ApiService.learningLessonsByTopicEndpoint.replaceAll(
         '{topic_id}',
@@ -50,12 +76,8 @@ class LearningService {
       ),
     );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _authService.sendAuthenticatedRequest(
+      (headers) => http.get(uri, headers: headers),
     );
 
     if (response.statusCode != 200) {
@@ -64,13 +86,12 @@ class LearningService {
 
     final body = jsonDecode(response.body);
     final list = (body['lessons'] as List?) ?? [];
-    return list.map((e) => LessonDto.fromJson(e)).toList();
+    return list
+        .map((lesson) => LessonDto.fromJson(lesson as Map<String, dynamic>))
+        .toList();
   }
 
   Future<LessonDetailDto> fetchLessonDetail(String lessonId) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) throw Exception('No access token found');
-
     final uri = Uri.parse(
       ApiService.learningLessonDetailEndpoint.replaceAll(
         '{lesson_id}',
@@ -78,12 +99,8 @@ class LearningService {
       ),
     );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _authService.sendAuthenticatedRequest(
+      (headers) => http.get(uri, headers: headers),
     );
 
     if (response.statusCode != 200) {
@@ -100,33 +117,22 @@ class LearningService {
     required int timeSpentSeconds,
     required double accuracy,
   }) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) throw Exception('No access token found');
-
     final uri = Uri.parse(
       ApiService.lessonSubmitEndpoint.replaceAll('{lesson_id}', lessonId),
     );
 
-    final requestBody = {
+    final requestBody = <String, dynamic>{
       'accuracy': accuracy,
       'time_spent': timeSpentSeconds,
-      'answers': answers.map((a) => a.toJson()).toList(),
     };
+    if (answers.isNotEmpty) {
+      requestBody['answers'] = answers.map((answer) => answer.toJson()).toList();
+    }
 
-    print('Submit Request: $requestBody');
-    print('Submit URI: $uri');
-
-    final response = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(requestBody),
+    final response = await _authService.sendAuthenticatedRequest(
+      (headers) =>
+          http.post(uri, headers: headers, body: jsonEncode(requestBody)),
     );
-
-    print('Submit Response Status: ${response.statusCode}');
-    print('Submit Response Body: ${response.body}');
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception(
@@ -139,17 +145,79 @@ class LearningService {
   }
 }
 
+class ExploreDto {
+  final List<TopicDto> vocabularyTopics;
+  final List<TopicDto> grammarTopics;
+  final ExploreStatsDto stats;
+  final int total;
+
+  ExploreDto({
+    required this.vocabularyTopics,
+    required this.grammarTopics,
+    required this.stats,
+    required this.total,
+  });
+
+  factory ExploreDto.fromJson(Map<String, dynamic> json) {
+    final vocabulary = (json['vocabulary_topics'] as List?) ?? [];
+    final grammar = (json['grammar_topics'] as List?) ?? [];
+    return ExploreDto(
+      vocabularyTopics: vocabulary
+          .map((topic) => TopicDto.fromJson(topic as Map<String, dynamic>))
+          .toList(),
+      grammarTopics: grammar
+          .map((topic) => TopicDto.fromJson(topic as Map<String, dynamic>))
+          .toList(),
+      stats: ExploreStatsDto.fromJson(
+        (json['stats'] as Map?)?.cast<String, dynamic>() ?? {},
+      ),
+      total: _asInt(json['total']),
+    );
+  }
+
+  List<TopicDto> get allTopics => [...vocabularyTopics, ...grammarTopics];
+}
+
+class ExploreStatsDto {
+  final int retentionRate;
+  final int dailyGoalMinutes;
+  final int dailyGoalCompleted;
+  final int dailyGoalTarget;
+
+  ExploreStatsDto({
+    required this.retentionRate,
+    required this.dailyGoalMinutes,
+    required this.dailyGoalCompleted,
+    required this.dailyGoalTarget,
+  });
+
+  factory ExploreStatsDto.fromJson(Map<String, dynamic> json) {
+    return ExploreStatsDto(
+      retentionRate: _asInt(json['retention_rate']),
+      dailyGoalMinutes: _asInt(json['daily_goal_minutes']),
+      dailyGoalCompleted: _asInt(json['daily_goal_completed']),
+      dailyGoalTarget: _asInt(json['daily_goal_target']),
+    );
+  }
+}
+
 class TopicDto {
   final String id;
   final String title;
   final String level;
   final String category;
+  final int lessonCount;
+  final int completedLessons;
+  final double progressPercent;
 
   TopicDto({
     required this.id,
     required this.title,
     required this.level,
     required this.category,
+    required this.lessonCount,
+    this.completedLessons = 0,
+    this.progressPercent = 0,
   });
 
   factory TopicDto.fromJson(Map<String, dynamic> json) {
@@ -158,6 +226,9 @@ class TopicDto {
       title: (json['title'] ?? '').toString(),
       level: (json['level'] ?? '').toString(),
       category: (json['category'] ?? '').toString(),
+      lessonCount: _asInt(json['lesson_count']),
+      completedLessons: _asInt(json['completed_lessons']),
+      progressPercent: _asDouble(json['progress_percent']),
     );
   }
 }
@@ -181,8 +252,8 @@ class LessonDto {
     return LessonDto(
       id: (json['id'] ?? '').toString(),
       topicId: (json['topic_id'] ?? '').toString(),
-      order: (json['order'] ?? 0) as int,
-      xpReward: (json['xp_reward'] ?? 0) as int,
+      order: _asInt(json['order']),
+      xpReward: _asInt(json['xp_reward']),
       completed: (json['completed'] ?? false) as bool,
     );
   }
@@ -191,12 +262,16 @@ class LessonDto {
 class LessonDetailDto {
   final String id;
   final String topicId;
+  final String topicTitle;
+  final int order;
   final int xpReward;
   final List<QuestionDto> questions;
 
   LessonDetailDto({
     required this.id,
     required this.topicId,
+    required this.topicTitle,
+    required this.order,
     required this.xpReward,
     required this.questions,
   });
@@ -204,9 +279,11 @@ class LessonDetailDto {
   factory LessonDetailDto.fromJson(Map<String, dynamic> json) {
     final questionsJson = (json['questions'] as List?) ?? [];
     return LessonDetailDto(
-      id: (json['id'] ?? '').toString(),
+      id: (json['id'] ?? json['lesson_id'] ?? '').toString(),
       topicId: (json['topic_id'] ?? '').toString(),
-      xpReward: (json['xp_reward'] ?? 0) as int,
+      topicTitle: (json['topic_title'] ?? '').toString(),
+      order: _asInt(json['order']),
+      xpReward: _asInt(json['xp_reward']),
       questions: questionsJson
           .map((e) => QuestionDto.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -244,49 +321,118 @@ class QuestionDto {
   }
 }
 
+int _asInt(dynamic value) {
+  if (value is int) return value;
+  if (value is double) return value.round();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double _asDouble(dynamic value) {
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
 class AnswerPayloadDto {
   final String questionId;
-  final String userAnswer;
+  final String selectedAnswer;
+  final bool isCorrect;
 
-  AnswerPayloadDto({required this.questionId, required this.userAnswer});
+  AnswerPayloadDto({
+    required this.questionId,
+    required this.selectedAnswer,
+    required this.isCorrect,
+  });
 
   Map<String, dynamic> toJson() => {
     'question_id': questionId,
-    'user_answer': userAnswer,
+    'selected_answer': selectedAnswer,
+    'is_correct': isCorrect,
   };
 }
 
 class LessonSubmitResultDto {
+  final String lessonId;
+  final String topicTitle;
+  final int lessonOrder;
   final int xpEarned;
+  final int totalXp;
   final int currentStreak;
   final int masteredWords;
   final String ranking;
   final double accuracy;
+  final int timeSpent;
   final int newTotalXp;
   final bool isCompleted;
+  final bool needsReview;
+  final bool alreadyCompleted;
+  final double dailyGoalPercent;
+  final MasteryDto? mastery;
   final String? nextLesson;
 
   LessonSubmitResultDto({
+    required this.lessonId,
+    required this.topicTitle,
+    required this.lessonOrder,
     required this.xpEarned,
+    required this.totalXp,
     required this.currentStreak,
     required this.masteredWords,
     required this.ranking,
     this.accuracy = 0.0,
+    this.timeSpent = 0,
     this.newTotalXp = 0,
     this.isCompleted = false,
+    this.needsReview = false,
+    this.alreadyCompleted = false,
+    this.dailyGoalPercent = 0,
+    this.mastery,
     this.nextLesson,
   });
 
   factory LessonSubmitResultDto.fromJson(Map<String, dynamic> json) {
+    final totalXp = _asInt(json['total_xp'] ?? json['new_total_xp']);
     return LessonSubmitResultDto(
-      xpEarned: (json['earned_xp'] ?? 0) as int,
-      currentStreak: (json['current_streak'] ?? 0) as int,
-      masteredWords: (json['mastered_words'] ?? 0) as int,
+      lessonId: (json['lesson_id'] ?? '').toString(),
+      topicTitle: (json['topic_title'] ?? '').toString(),
+      lessonOrder: _asInt(json['lesson_order'] ?? json['order']),
+      xpEarned: _asInt(json['earned_xp']),
+      totalXp: totalXp,
+      currentStreak: _asInt(json['current_streak']),
+      masteredWords: _asInt(json['mastered_words']),
       ranking: (json['ranking'] ?? '').toString(),
-      accuracy: (json['accuracy'] ?? 0).toDouble(),
-      newTotalXp: (json['new_total_xp'] ?? 0) as int,
-      isCompleted: (json['is_completed'] ?? false) as bool,
+      accuracy: _asDouble(json['accuracy']),
+      timeSpent: _asInt(json['time_spent']),
+      newTotalXp: totalXp,
+      isCompleted:
+          json['is_completed'] == true || json['already_completed'] == true,
+      needsReview: json['needs_review'] == true,
+      alreadyCompleted: json['already_completed'] == true,
+      dailyGoalPercent: _asDouble(json['daily_goal_percent']),
+      mastery: json['mastery'] is Map
+          ? MasteryDto.fromJson((json['mastery'] as Map).cast<String, dynamic>())
+          : null,
       nextLesson: json['next_lesson']?.toString(),
+    );
+  }
+}
+
+class MasteryDto {
+  final String title;
+  final int level;
+  final double progressPercent;
+
+  MasteryDto({
+    required this.title,
+    required this.level,
+    required this.progressPercent,
+  });
+
+  factory MasteryDto.fromJson(Map<String, dynamic> json) {
+    return MasteryDto(
+      title: (json['title'] ?? '').toString(),
+      level: _asInt(json['level']),
+      progressPercent: _asDouble(json['progress_percent']),
     );
   }
 }

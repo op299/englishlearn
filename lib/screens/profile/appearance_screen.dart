@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../services/app_refresh_service.dart';
 import '../../services/theme_service.dart';
+import '../../services/user_service.dart';
 
 class AppearanceScreen extends StatefulWidget {
   const AppearanceScreen({super.key});
@@ -11,6 +13,7 @@ class AppearanceScreen extends StatefulWidget {
 class _AppearanceScreenState extends State<AppearanceScreen> {
   late String _selectedTheme;
   final _themeService = ThemeService();
+  final _userService = UserService();
 
   @override
   void initState() {
@@ -86,16 +89,26 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
   }) {
     return GestureDetector(
       onTap: () async {
-        await _themeService.setTheme(themeValue);
-        setState(() {
-          _selectedTheme = themeValue;
-        });
-        if (mounted) {
+        final previousTheme = _selectedTheme;
+        try {
+          await _themeService.setTheme(themeValue);
+          await _userService.updateSettings(theme: themeValue);
+          AppRefreshService.notifyLearningDataChanged();
+          if (!mounted || !context.mounted) return;
+          setState(() {
+            _selectedTheme = themeValue;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Theme changed to $title'),
               duration: const Duration(seconds: 1),
             ),
+          );
+        } catch (e) {
+          await _themeService.setTheme(previousTheme);
+          if (!mounted || !context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
           );
         }
       },

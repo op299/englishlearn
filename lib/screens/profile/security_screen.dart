@@ -15,7 +15,6 @@ class _SecurityScreenState extends State<SecurityScreen> {
   bool _showCurrentPassword = false;
   bool _showNewPassword = false;
   bool _showConfirmPassword = false;
-  bool _isPasswordValid = false;
 
   @override
   void initState() {
@@ -195,11 +194,6 @@ class _SecurityScreenState extends State<SecurityScreen> {
             TextField(
               controller: _newPasswordController,
               obscureText: !_showNewPassword,
-              onChanged: (value) {
-                setState(() {
-                  _isPasswordValid = _validatePassword(value);
-                });
-              },
               decoration: InputDecoration(
                 hintText: '••••••••',
                 border: OutlineInputBorder(

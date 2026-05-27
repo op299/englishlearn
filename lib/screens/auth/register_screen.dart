@@ -26,7 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   int _selectedDailyGoal = 10;
 
   final List<String> _levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-  final List<int> _dailyGoals = [5, 10, 15, 20, 30, 45, 60];
+  final List<int> _dailyGoals = [5, 10, 15];
 
   @override
   void dispose() {

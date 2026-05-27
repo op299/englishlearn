@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/explore/explore_screen.dart';
 import '../screens/progress/progress_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../services/auth_service.dart';
 
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({super.key});
@@ -13,6 +16,7 @@ class MainNavigationShell extends StatefulWidget {
 
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _selectedIndex = 0;
+  StreamSubscription<void>? _sessionExpiredSubscription;
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -25,6 +29,21 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionExpiredSubscription = AuthService.sessionExpiredStream.listen((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _sessionExpiredSubscription?.cancel();
+    super.dispose();
   }
 
   @override

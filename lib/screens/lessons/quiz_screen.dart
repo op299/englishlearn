@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/app_refresh_service.dart';
 import '../../services/learning_service.dart';
 import 'result_screen.dart';
 
@@ -44,9 +45,12 @@ class _QuizScreenState extends State<QuizScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        return await showDialog<bool>(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop =
+            await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
                 title: const Text('Exit Quiz?'),
@@ -64,6 +68,9 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
             ) ??
             false;
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
+        }
       },
       child: Scaffold(
         appBar: AppBar(
@@ -242,7 +249,9 @@ class _QuizScreenState extends State<QuizScreen> {
                       ),
                       borderRadius: BorderRadius.circular(8),
                       color: isSelected
-                          ? Theme.of(context).primaryColor.withOpacity(0.1)
+                          ? Theme.of(
+                              context,
+                            ).primaryColor.withValues(alpha: 0.1)
                           : Colors.transparent,
                     ),
                     padding: const EdgeInsets.all(12),
@@ -292,6 +301,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
     try {
       final timeSpent = DateTime.now().difference(_startTime).inSeconds;
+      final submittedTimeSpent = timeSpent <= 0 ? 1 : timeSpent;
 
       // Calculate accuracy
       int correctCount = 0;
@@ -301,24 +311,41 @@ class _QuizScreenState extends State<QuizScreen> {
         if (isCorrect) correctCount++;
         return AnswerPayloadDto(
           questionId: question.id,
-          userAnswer: userAnswer,
+          selectedAnswer: userAnswer,
+          isCorrect: isCorrect,
         );
       }).toList();
 
-      final accuracy = (correctCount / lessonDetail.questions.length * 100)
-          .toStringAsFixed(1);
+      final accuracy = lessonDetail.questions.isEmpty
+          ? '0.0'
+          : (correctCount / lessonDetail.questions.length * 100)
+                .toStringAsFixed(1);
 
       final result = await _learningService.submitLesson(
         lessonId: widget.lessonId,
         answers: answers,
-        timeSpentSeconds: timeSpent,
+        timeSpentSeconds: submittedTimeSpent,
         accuracy: double.parse(accuracy),
       );
+      AppRefreshService.notifyLearningDataChanged();
 
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ResultScreen(result: result)),
+          MaterialPageRoute(
+            builder: (context) => ResultScreen(
+              result: result,
+              accuracy: double.parse(accuracy),
+              timeSpentSeconds: submittedTimeSpent,
+              lessonId: widget.lessonId,
+              lessonOrder: lessonDetail.order == 0
+                  ? widget.lessonOrder
+                  : lessonDetail.order,
+              lessonTitle: lessonDetail.topicTitle.isEmpty
+                  ? 'Lesson ${widget.lessonOrder}'
+                  : lessonDetail.topicTitle,
+            ),
+          ),
         );
       }
     } catch (e) {

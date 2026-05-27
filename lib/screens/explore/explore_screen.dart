@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../../services/learning_service.dart';
 import '../lessons/lessons_list_screen.dart';
 
@@ -10,159 +13,255 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
+  final _searchController = TextEditingController();
   late final LearningService _learningService;
-  late Future<List<TopicDto>> _topicsFuture;
+  late Future<ExploreDto> _exploreFuture;
+  Timer? _searchDebounce;
   String? _selectedLevel;
 
-  // Map display labels to CEFR levels
-  final Map<String, String> levelMapping = {
-    'All': '',
-    'Beginner': 'A1',
-    'Intermediate': 'B1',
-    'Advanced': 'C1',
-  };
+  final List<String> _levels = ['All', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
   @override
   void initState() {
     super.initState();
     _learningService = LearningService();
-    _topicsFuture = _learningService.fetchTopics();
+    _exploreFuture = _loadExplore();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<ExploreDto> _loadExplore() {
+    return _learningService.fetchExplore(
+      query: _searchController.text,
+      level: _selectedLevel,
+    );
+  }
+
+  void _reloadExplore() {
+    setState(() {
+      _exploreFuture = _loadExplore();
+    });
+  }
+
+  void _queueSearch() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), _reloadExplore);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Explore'), elevation: 0),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search vocabulary...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _reloadExplore();
+          await _exploreFuture;
+        },
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+          children: [
+            TextField(
+              controller: _searchController,
+              onChanged: (_) => _queueSearch(),
+              decoration: InputDecoration(
+                hintText: 'Search vocabulary, grammar, business...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _searchController.clear();
+                          _reloadExplore();
+                        },
+                      ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Filter by Level',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: ['All', 'Beginner', 'Intermediate', 'Advanced'].map(
-                    (level) {
-                      final isSelected =
-                          _selectedLevel == null && level == 'All' ||
-                          _selectedLevel == levelMapping[level];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          label: Text(level),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(() {
-                              _selectedLevel = level == 'All'
-                                  ? null
-                                  : levelMapping[level];
-                              _topicsFuture = _learningService.fetchTopics(
-                                level: _selectedLevel,
-                              );
-                            });
-                          },
-                        ),
-                      );
-                    },
-                  ).toList(),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Available Topics',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              FutureBuilder<List<TopicDto>>(
-                future: _topicsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 48,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Error: ${snapshot.error}',
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => setState(() {
-                              _topicsFuture = _learningService.fetchTopics(
-                                level: _selectedLevel,
-                              );
-                            }),
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final topics = snapshot.data ?? [];
-
-                  if (topics.isEmpty) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: Text('No topics available'),
-                      ),
-                    );
-                  }
-
-                  return GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    children: topics
-                        .map((topic) => _buildTopicCard(context, topic))
-                        .toList(),
+            ),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _levels.map((level) {
+                  final selected =
+                      (level == 'All' && _selectedLevel == null) ||
+                      _selectedLevel == level;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(level),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedLevel = level == 'All' ? null : level;
+                          _exploreFuture = _loadExplore();
+                        });
+                      },
+                    ),
                   );
-                },
+                }).toList(),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            FutureBuilder<ExploreDto>(
+              future: _exploreFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return _ErrorPanel(
+                    message: snapshot.error.toString(),
+                    onRetry: _reloadExplore,
+                  );
+                }
+
+                final data = snapshot.data!;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _ExploreStats(stats: data.stats, total: data.total),
+                    const SizedBox(height: 16),
+                    _TopicSection(
+                      title: 'Vocabulary',
+                      topics: data.vocabularyTopics,
+                    ),
+                    const SizedBox(height: 16),
+                    _TopicSection(title: 'Grammar', topics: data.grammarTopics),
+                  ],
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildTopicCard(BuildContext context, TopicDto topic) {
+class _ExploreStats extends StatelessWidget {
+  final ExploreStatsDto stats;
+  final int total;
+
+  const _ExploreStats({required this.stats, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _StatChip(label: 'TOPICS', value: total.toString()),
+        const SizedBox(width: 10),
+        _StatChip(label: 'RETENTION', value: '${stats.retentionRate}%'),
+        const SizedBox(width: 10),
+        _StatChip(
+          label: 'GOAL',
+          value:
+              '${stats.dailyGoalCompleted}/${stats.dailyGoalTarget == 0 ? 3 : stats.dailyGoalTarget}',
+        ),
+      ],
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _StatChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 9,
+                color: Colors.black54,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TopicSection extends StatelessWidget {
+  final String title;
+  final List<TopicDto> topics;
+
+  const _TopicSection({required this.title, required this.topics});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 12),
+        if (topics.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text('No topics available')),
+          )
+        else
+          GridView.builder(
+            itemCount: topics.length,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 1.15,
+            ),
+            itemBuilder: (context, index) {
+              return _TopicCard(topic: topics[index]);
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _TopicCard extends StatelessWidget {
+  final TopicDto topic;
+
+  const _TopicCard({required this.topic});
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = (topic.progressPercent / 100).clamp(0.0, 1.0).toDouble();
     return Card(
-      elevation: 2,
+      elevation: 1,
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -173,40 +272,73 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           );
         },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    topic.category == 'Grammar'
+                        ? Icons.school_outlined
+                        : Icons.menu_book_outlined,
+                    color: Colors.blue,
+                    size: 18,
+                  ),
+                  const Spacer(),
+                  Text(
+                    topic.level,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ),
-              child: const Center(
-                child: Icon(Icons.book, size: 28, color: Colors.blue),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
+              const SizedBox(height: 8),
+              Text(
                 topic.title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w500),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              topic.level,
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: Colors.grey[600]),
-            ),
-          ],
+              const Spacer(),
+              Text(
+                '${topic.completedLessons}/${topic.lessonCount} lessons',
+                style: const TextStyle(color: Colors.black54, fontSize: 11),
+              ),
+              const SizedBox(height: 6),
+              LinearProgressIndicator(value: progress, minHeight: 4),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _ErrorPanel extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorPanel({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
       ),
     );
   }
