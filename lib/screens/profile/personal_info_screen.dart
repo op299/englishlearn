@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../services/auth_service.dart';
+
+import '../../services/app_refresh_service.dart';
+import '../../services/user_service.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -10,212 +11,203 @@ class PersonalInfoScreen extends StatefulWidget {
 }
 
 class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
-  bool _isLoading = true;
-  final _authService = AuthService();
+  final _formKey = GlobalKey<FormState>();
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _avatarUrlController = TextEditingController();
+  final _userService = UserService();
 
-  late TextEditingController _fullNameController;
-  late TextEditingController _emailController;
-  late TextEditingController _levelController;
-  late TextEditingController _dailyGoalController;
+  bool _isLoading = true;
+  bool _isSaving = false;
+  String _selectedLevel = 'A1';
+  int _selectedDailyGoal = 10;
+
+  final List<String> _levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  final List<int> _dailyGoals = [5, 10, 15, 20, 30, 45, 60];
 
   @override
   void initState() {
     super.initState();
-    _fullNameController = TextEditingController();
-    _emailController = TextEditingController();
-    _levelController = TextEditingController();
-    _dailyGoalController = TextEditingController();
     _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      // Load từ backend (MySQL)
-      final user = await _authService.getCurrentUser();
-
-      // Lưu vào SharedPreferences cho lần sau
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_full_name', user.fullName);
-      await prefs.setString('user_email', user.email);
-      await prefs.setString('user_level', user.currentLevel);
-
-      setState(() {
-        _fullNameController.text = user.fullName;
-        _emailController.text = user.email;
-        _levelController.text = user.currentLevel;
-        _dailyGoalController.text = '10 minutes';
-        _isLoading = false;
-      });
-    } catch (e) {
-      // Fallback: Load từ SharedPreferences nếu backend lỗi
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final fullName = prefs.getString('user_full_name') ?? '';
-        final email = prefs.getString('user_email') ?? '';
-        final level = prefs.getString('user_level') ?? 'A1';
-        final dailyGoal = prefs.getInt('user_daily_goal') ?? 10;
-
-        setState(() {
-          _fullNameController.text = fullName;
-          _emailController.text = email;
-          _levelController.text = level;
-          _dailyGoalController.text = '$dailyGoal minutes';
-          _isLoading = false;
-        });
-      } catch (e2) {
-        setState(() {
-          _isLoading = false;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error loading user data: ${e.toString()}')),
-          );
-        }
-      }
-    }
   }
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
-    _levelController.dispose();
-    _dailyGoalController.dispose();
+    _avatarUrlController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final profileFuture = _userService.fetchProfile();
+      final dashboardFuture = _userService.fetchDashboard();
+      final profile = await profileFuture;
+      final dashboard = await dashboardFuture;
+      if (!mounted) return;
+      setState(() {
+        _fullNameController.text = profile.fullName;
+        _emailController.text = profile.email;
+        _avatarUrlController.text = profile.avatarUrl ?? '';
+        _selectedLevel = _levels.contains(profile.currentLevel)
+            ? profile.currentLevel
+            : 'A1';
+        _selectedDailyGoal = _dailyGoals.contains(dashboard.dailyGoalMinutes)
+            ? dashboard.dailyGoalMinutes
+            : 10;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _isSaving = true;
+    });
+    try {
+      final avatarUrl = _avatarUrlController.text.trim();
+      await _userService.updateProfile(
+        fullName: _fullNameController.text.trim(),
+        avatarUrl: avatarUrl,
+        currentLevel: _selectedLevel,
+      );
+      await _userService.updateSettings(
+        dailyGoalMinutes: _selectedDailyGoal,
+        currentLevel: _selectedLevel,
+      );
+      AppRefreshService.notifyLearningDataChanged();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Personal Info'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Personal Info'), elevation: 0),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Personal Information',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your profile information',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Full Name Field
-                  Text(
-                    'Full Name',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _fullNameController,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextFormField(
+                      controller: _fullNameController,
+                      validator: (value) {
+                        if (value == null || value.trim().length < 2) {
+                          return 'Enter your full name';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Full name',
+                        border: OutlineInputBorder(),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Email Field
-                  Text(
-                    'Email',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _emailController,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _emailController,
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // English Level Field
-                  Text(
-                    'English Level',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _levelController,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _avatarUrlController,
+                      decoration: const InputDecoration(
+                        labelText: 'Avatar URL',
+                        border: OutlineInputBorder(),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Daily Goal Field
-                  Text(
-                    'Daily Goal',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _dailyGoalController,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: _selectedLevel,
+                      decoration: const InputDecoration(
+                        labelText: 'English level',
+                        border: OutlineInputBorder(),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade100,
+                      items: _levels
+                          .map(
+                            (level) => DropdownMenuItem(
+                              value: level,
+                              child: Text(level),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _selectedLevel = value;
+                        });
+                      },
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int>(
+                      value: _selectedDailyGoal,
+                      decoration: const InputDecoration(
+                        labelText: 'Daily goal',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _dailyGoals
+                          .map(
+                            (goal) => DropdownMenuItem(
+                              value: goal,
+                              child: Text('$goal minutes'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _selectedDailyGoal = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : _save,
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Save changes'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
     );

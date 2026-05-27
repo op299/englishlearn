@@ -177,16 +177,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Forgot Password Link
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/forgot-password');
-                        },
-                        child: const Text('Forgot Password?'),
-                      ),
-                    ),
                   ],
                 ),
               ),
