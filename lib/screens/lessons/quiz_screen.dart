@@ -1,10 +1,15 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import '../../routes/app_router.dart';
 import '../../services/app_refresh_service.dart';
 import '../../services/learning_service.dart';
-import 'result_screen.dart';
+import '../../services/result_data_service.dart';
 
+@RoutePage()
 class QuizScreen extends StatefulWidget {
+  @PathParam('lessonId')
   final String lessonId;
+  @PathParam('lessonOrder')
   final int lessonOrder;
 
   const QuizScreen({
@@ -69,7 +74,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ) ??
             false;
         if (shouldPop && context.mounted) {
-          Navigator.of(context).pop();
+          context.maybePop();
         }
       },
       child: Scaffold(
@@ -89,11 +94,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
+                    const Icon(Icons.error_outline, size: 48, color: null),
                     const SizedBox(height: 16),
                     Text(
                       'Error: ${snapshot.error}',
@@ -195,7 +196,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     height: 40,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
-                      color: Colors.grey[200],
+                      color: Theme.of(context).colorScheme.surfaceVariant,
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
@@ -220,7 +221,7 @@ class _QuizScreenState extends State<QuizScreen> {
               'Context: "${question.contextSentence}"',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontStyle: FontStyle.italic,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
@@ -263,8 +264,10 @@ class _QuizScreenState extends State<QuizScreen> {
                           decoration: BoxDecoration(
                             border: Border.all(
                               color: isSelected
-                                  ? Theme.of(context).primaryColor
-                                  : Colors.grey[300]!,
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.outlineVariant,
                               width: isSelected ? 2 : 1,
                             ),
                             borderRadius: BorderRadius.circular(50),
@@ -275,7 +278,9 @@ class _QuizScreenState extends State<QuizScreen> {
                                     width: 10,
                                     height: 10,
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).primaryColor,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                       borderRadius: BorderRadius.circular(50),
                                     ),
                                   ),
@@ -330,22 +335,22 @@ class _QuizScreenState extends State<QuizScreen> {
       AppRefreshService.notifyLearningDataChanged();
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ResultScreen(
-              result: result,
-              accuracy: double.parse(accuracy),
-              timeSpentSeconds: submittedTimeSpent,
-              lessonId: widget.lessonId,
-              lessonOrder: lessonDetail.order == 0
-                  ? widget.lessonOrder
-                  : lessonDetail.order,
-              lessonTitle: lessonDetail.topicTitle.isEmpty
-                  ? 'Lesson ${widget.lessonOrder}'
-                  : lessonDetail.topicTitle,
-            ),
-          ),
+        // Store result data in service for ResultScreen to retrieve
+        final service = ResultDataService();
+        service.result = result;
+        service.accuracy = double.parse(accuracy);
+        service.timeSpentSeconds = submittedTimeSpent;
+        service.lessonId = widget.lessonId;
+        service.lessonTitle = lessonDetail.topicTitle.isEmpty
+            ? 'Lesson ${widget.lessonOrder}'
+            : lessonDetail.topicTitle;
+
+        // Navigate using auto_route
+        final lessonOrder = lessonDetail.order == 0
+            ? widget.lessonOrder
+            : lessonDetail.order;
+        context.router.push(
+          ResultRoute(lessonId: widget.lessonId, lessonOrder: lessonOrder),
         );
       }
     } catch (e) {

@@ -1,4 +1,6 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import '../../routes/app_router.dart';
 import '../../services/auth_service.dart';
 
 class SecurityScreen extends StatefulWidget {
@@ -93,11 +95,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           if (mounted) {
             await authService.clearTokens();
             if (mounted) {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/login',
-                (route) => false,
-              );
+              context.router.replaceAll([const LoginRoute()]);
             }
           }
         });

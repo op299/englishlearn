@@ -65,18 +65,18 @@ class _ReviewMistakesScreenState extends State<ReviewMistakesScreen> {
               onRefresh: _refresh,
               child: ListView(
                 padding: const EdgeInsets.all(24),
-                children: const [
-                  SizedBox(height: 120),
+                children: [
+                  const SizedBox(height: 120),
                   Icon(
                     Icons.check_circle_outline,
                     size: 56,
-                    color: Colors.green,
+                    color: Theme.of(context).colorScheme.secondary,
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'No mistakes to review',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ],
               ),
@@ -125,19 +125,21 @@ class _MistakeCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               mistake.contextSentence,
-              style: const TextStyle(color: Colors.black54),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 14),
             _AnswerLine(
               label: 'Your answer',
               value: mistake.selectedAnswer,
-              color: Colors.red,
+              color: Theme.of(context).colorScheme.error,
             ),
             const SizedBox(height: 8),
             _AnswerLine(
               label: 'Correct',
               value: mistake.correctAnswer,
-              color: Colors.green,
+              color: Theme.of(context).colorScheme.secondary,
             ),
             const SizedBox(height: 12),
             Align(
@@ -210,7 +212,7 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const Icon(Icons.error_outline, size: 48, color: null),
             const SizedBox(height: 16),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
