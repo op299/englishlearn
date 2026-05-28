@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../routes/app_router.dart';
 import '../../services/auth_service.dart';
 import '../../utils/validators.dart';
 
@@ -65,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await prefs.setBool('onboarding_seen', true);
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        context.router.replaceAll([const MainShellRoute()]);
       }
     } catch (e) {
       setState(() {
@@ -384,7 +385,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/login');
+                      context.router.replace(const LoginRoute());
                     },
                     child: const Text(
                       'Sign In',

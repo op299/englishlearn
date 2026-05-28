@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        context.router.replaceAll([const MainShellRoute()]);
       }
     } catch (e) {
       setState(() {

@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../routes/app_router.dart';
 
 @RoutePage()
 class OnboardingScreen extends StatefulWidget {
@@ -15,7 +16,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_seen', true);
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/register');
+      context.router.replace(const RegisterRoute());
     }
   }
 
@@ -222,7 +223,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   height: 56,
                   child: OutlinedButton(
                     onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/login');
+                      context.router.replace(const LoginRoute());
                     },
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: Colors.blue.shade600, width: 2),
