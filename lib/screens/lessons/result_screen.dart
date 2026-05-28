@@ -57,6 +57,8 @@ class _ResultScreenState extends State<ResultScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final timeMinutes = widget.timeSpentSeconds <= 0
         ? 0
         : (widget.timeSpentSeconds / 60).ceil();
@@ -67,150 +69,92 @@ class _ResultScreenState extends State<ResultScreen>
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: FadeTransition(
-            opacity: _opacityAnimation,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+        appBar: AppBar(
+          title: const Text('Lesson Complete'),
+          leading: IconButton(
+            icon: const Icon(Icons.home_outlined),
+            onPressed: () =>
+                Navigator.of(context).popUntil((route) => route.isFirst),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: _reviewLesson,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Review'),
+            ),
+          ],
+        ),
+        body: FadeTransition(
+          opacity: _opacityAnimation,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+            child: Column(
               children: [
-                _TopBar(onClose: _goHome),
-                const SizedBox(height: 40),
-                ScaleTransition(scale: _scaleAnimation, child: const _Badge()),
-                const SizedBox(height: 16),
-                const Text(
-                  'Lesson Complete',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF070D22),
-                  ),
+                ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: _Badge(accuracy: widget.accuracy),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 12),
                 Text(
                   lessonLabel,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: Color(0xFF6B7B96),
-                    fontWeight: FontWeight.w500,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     Expanded(
                       child: _ResultMetric(
-                        label: 'ACCURACY',
+                        label: 'Accuracy',
                         value: widget.accuracy.round().toString(),
                         suffix: '%',
+                        colorScheme: colorScheme,
                       ),
-                    ),
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: _ResultMetric(
-                        label: 'TIME',
-                        value: timeMinutes.toString(),
-                        suffix: 'MIN',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Divider(color: Colors.grey.shade300),
-                const SizedBox(height: 28),
-                const Text(
-                  'DAILY STREAK',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    letterSpacing: 1,
-                    color: Color(0xFF93A2B8),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Icon(
-                      Icons.local_fire_department,
-                      color: Color(0xFF071126),
-                      size: 36,
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      widget.result.currentStreak.toString(),
-                      style: const TextStyle(
-                        fontSize: 64,
-                        height: 0.9,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF071126),
+                    Expanded(
+                      child: _ResultMetric(
+                        label: 'Time',
+                        value: timeMinutes.toString(),
+                        suffix: 'min',
+                        colorScheme: colorScheme,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                _StreakBars(streak: widget.result.currentStreak),
-                const SizedBox(height: 14),
-                Text(
-                  widget.result.ranking.isEmpty
-                      ? 'RANKING UPDATED'
-                      : "YOU'RE IN THE ${widget.result.ranking.toUpperCase()} THIS WEEK",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFF0D67FF),
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
+                _StreakSection(
+                  currentStreak: widget.result.currentStreak,
+                  ranking: widget.result.ranking,
+                  colorScheme: colorScheme,
+                  theme: theme,
                 ),
-                const SizedBox(height: 28),
-                Divider(color: Colors.grey.shade300),
+                const SizedBox(height: 20),
+                _RewardPanel(
+                  result: widget.result,
+                  accuracy: widget.accuracy,
+                  colorScheme: colorScheme,
+                  theme: theme,
+                ),
                 const SizedBox(height: 24),
-                _RewardPanel(result: widget.result, accuracy: widget.accuracy),
-                const SizedBox(height: 28),
-                SizedBox(
-                  height: 88,
-                  child: ElevatedButton(
-                    onPressed: _goHome,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0D67FF),
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.zero,
-                      ),
-                    ),
-                    child: const Text(
-                      'CONTINUE',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        letterSpacing: 5,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                FilledButton.icon(
+                  onPressed: () =>
+                      Navigator.of(context).popUntil((route) => route.isFirst),
+                  icon: const Icon(Icons.check, size: 20),
+                  label: const Text('Continue'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
                   ),
                 ),
-                const SizedBox(height: 26),
-                SizedBox(
-                  height: 76,
-                  child: OutlinedButton(
-                    onPressed: _reviewLesson,
-                    style: OutlinedButton.styleFrom(
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.zero,
-                      ),
-                      side: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    child: const Text(
-                      'REVIEW MISTAKES',
-                      style: TextStyle(
-                        color: Color(0xFF111111),
-                        fontSize: 17,
-                        letterSpacing: 3,
-                      ),
-                    ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _reviewLesson,
+                  icon: const Icon(Icons.replay, size: 20),
+                  label: const Text('Review Mistakes'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
                   ),
                 ),
               ],
@@ -219,10 +163,6 @@ class _ResultScreenState extends State<ResultScreen>
         ),
       ),
     );
-  }
-
-  void _goHome() {
-    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _reviewLesson() {
@@ -235,59 +175,31 @@ class _ResultScreenState extends State<ResultScreen>
   }
 }
 
-class _TopBar extends StatelessWidget {
-  final VoidCallback onClose;
-
-  const _TopBar({required this.onClose});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: onClose,
-          icon: const Icon(Icons.close, size: 32, color: Color(0xFF070D22)),
-        ),
-        const Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.auto_awesome, color: Color(0xFF0D67FF), size: 24),
-              SizedBox(width: 8),
-              Text(
-                'SESSION COMPLETE',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 48),
-      ],
-    );
-  }
-}
-
 class _Badge extends StatelessWidget {
-  const _Badge();
+  final double accuracy;
+
+  const _Badge({required this.accuracy});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isGood = accuracy >= 80;
+
     return Center(
       child: Container(
-        width: 110,
-        height: 110,
+        width: 80,
+        height: 80,
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE0E0E0)),
+          color: isGood
+              ? colorScheme.primaryContainer
+              : colorScheme.errorContainer,
+          shape: BoxShape.circle,
         ),
-        child: const Icon(
-          Icons.workspace_premium,
-          color: Color(0xFF0D67FF),
-          size: 54,
+        child: Icon(
+          isGood ? Icons.workspace_premium : Icons.emoji_events,
+          color: isGood ? colorScheme.primary : colorScheme.error,
+          size: 40,
         ),
       ),
     );
@@ -298,50 +210,60 @@ class _ResultMetric extends StatelessWidget {
   final String label;
   final String value;
   final String suffix;
+  final ColorScheme colorScheme;
 
   const _ResultMetric({
     required this.label,
     required this.value,
     required this.suffix,
+    required this.colorScheme,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFF93A2B8),
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 6),
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(
-                color: Color(0xFF070D22),
-                fontWeight: FontWeight.w900,
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: colorScheme.onSurface,
+                ),
               ),
-              children: [
-                TextSpan(text: value, style: const TextStyle(fontSize: 30)),
-                TextSpan(
-                  text: suffix == '%' ? suffix : ' $suffix',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF93A2B8),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  suffix,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -349,26 +271,88 @@ class _ResultMetric extends StatelessWidget {
   }
 }
 
-class _StreakBars extends StatelessWidget {
-  final int streak;
+class _StreakSection extends StatelessWidget {
+  final int currentStreak;
+  final String ranking;
+  final ColorScheme colorScheme;
+  final ThemeData theme;
 
-  const _StreakBars({required this.streak});
+  const _StreakSection({
+    required this.currentStreak,
+    required this.ranking,
+    required this.colorScheme,
+    required this.theme,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final filled = math.min(7, streak);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(7, (index) {
-        return Container(
-          width: 36,
-          height: 8,
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          color: index < filled
-              ? const Color(0xFF0D67FF)
-              : Colors.grey.shade200,
-        );
-      }),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.local_fire_department,
+                color: colorScheme.primary,
+                size: 28,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$currentStreak',
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w900,
+                  color: colorScheme.onSurface,
+                  height: 0.9,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'day streak',
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(7, (index) {
+              final filled = index < math.min(7, currentStreak);
+              return Container(
+                width: 32,
+                height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: filled
+                      ? colorScheme.primary
+                      : colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+          if (ranking.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              "You're in the $ranking this week!",
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -376,8 +360,15 @@ class _StreakBars extends StatelessWidget {
 class _RewardPanel extends StatelessWidget {
   final LessonSubmitResultDto result;
   final double accuracy;
+  final ColorScheme colorScheme;
+  final ThemeData theme;
 
-  const _RewardPanel({required this.result, required this.accuracy});
+  const _RewardPanel({
+    required this.result,
+    required this.accuracy,
+    required this.colorScheme,
+    required this.theme,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -385,10 +376,12 @@ class _RewardPanel extends StatelessWidget {
     final masteryProgress = mastery == null
         ? (accuracy / 100).clamp(0.0, 1.0).toDouble()
         : (mastery.progressPercent / 100).clamp(0.0, 1.0).toDouble();
+
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,53 +393,64 @@ class _RewardPanel extends StatelessWidget {
                   mastery?.title.isNotEmpty == true
                       ? mastery!.title
                       : 'Vocabulary Master',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF070D22),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              Text(
-                '+${result.xpEarned} XP',
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Color(0xFF0D67FF),
-                  fontWeight: FontWeight.w800,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '+${result.xpEarned} XP',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: Text(
                   mastery == null
-                      ? '${result.masteredWords} MASTERED'
-                      : '${mastery.title} LV ${mastery.level}',
-                  style: const TextStyle(
-                    color: Color(0xFF93A2B8),
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
+                      ? '${result.masteredWords} words mastered'
+                      : '${mastery.title} Lv ${mastery.level}',
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
               Text(
-                '${(mastery?.progressPercent ?? accuracy).round()}%',
-                style: const TextStyle(
-                  color: Color(0xFF93A2B8),
-                  fontWeight: FontWeight.w900,
+                '${(masteryProgress * 100).round()}%',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.primary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          LinearProgressIndicator(
-            value: masteryProgress,
-            minHeight: 6,
-            color: const Color(0xFF0D67FF),
-            backgroundColor: Colors.grey.shade100,
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: masteryProgress,
+              minHeight: 6,
+              backgroundColor: colorScheme.surfaceContainerHighest,
+            ),
           ),
         ],
       ),

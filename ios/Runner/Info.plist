@@ -45,5 +45,8 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Notification permissions -->
+	<key>UNNotificationContentExtension</key>
+	<array/>
 </dict>
 </plist>

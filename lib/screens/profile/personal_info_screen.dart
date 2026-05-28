@@ -200,8 +200,9 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                             ? const SizedBox(
                                 width: 22,
                                 height: 22,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text('Save changes'),
                       ),

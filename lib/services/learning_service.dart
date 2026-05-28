@@ -126,7 +126,9 @@ class LearningService {
       'time_spent': timeSpentSeconds,
     };
     if (answers.isNotEmpty) {
-      requestBody['answers'] = answers.map((answer) => answer.toJson()).toList();
+      requestBody['answers'] = answers
+          .map((answer) => answer.toJson())
+          .toList();
     }
 
     final response = await _authService.sendAuthenticatedRequest(
@@ -410,7 +412,9 @@ class LessonSubmitResultDto {
       alreadyCompleted: json['already_completed'] == true,
       dailyGoalPercent: _asDouble(json['daily_goal_percent']),
       mastery: json['mastery'] is Map
-          ? MasteryDto.fromJson((json['mastery'] as Map).cast<String, dynamic>())
+          ? MasteryDto.fromJson(
+              (json['mastery'] as Map).cast<String, dynamic>(),
+            )
           : null,
       nextLesson: json['next_lesson']?.toString(),
     );

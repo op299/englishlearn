@@ -87,9 +87,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               Text(
                 'Create a new password',
                 textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 32),
               TextFormField(
