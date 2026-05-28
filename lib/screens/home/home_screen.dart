@@ -291,9 +291,7 @@ class _DailyGoalCard extends StatelessWidget {
     final progress = (todayXp / goalXp).clamp(0.0, 1.0).toDouble();
     final percent = (progress * 100).round();
     final completedUnits = dashboard.dailyGoal.targetLessons > 0
-        ? dashboard.dailyGoal.completedLessons
-              .clamp(0, dashboard.dailyGoal.targetLessons)
-              .toInt()
+        ? dashboard.dailyGoal.completedLessons.toInt()
         : dashboard.missions.where((m) => m.isCompleted).length;
     final targetUnits = dashboard.dailyGoal.targetLessons > 0
         ? dashboard.dailyGoal.targetLessons

@@ -13,12 +13,17 @@ import 'screens/lessons/quiz_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'services/auth_service.dart';
+import 'services/notification_service.dart';
 import 'services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final themeService = ThemeService();
   await themeService.initialize();
+
+  // Initialize notification service
+  final notificationService = NotificationService();
+  await notificationService.initialize();
 
   runApp(const MyApp());
 }

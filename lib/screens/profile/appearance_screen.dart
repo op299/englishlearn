@@ -108,7 +108,9 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
           await _themeService.setTheme(previousTheme);
           if (!mounted || !context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+            SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', '')),
+            ),
           );
         }
       },

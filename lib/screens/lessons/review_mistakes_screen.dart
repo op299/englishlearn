@@ -53,7 +53,10 @@ class _ReviewMistakesScreenState extends State<ReviewMistakesScreen> {
           }
 
           if (snapshot.hasError) {
-            return _ErrorState(message: snapshot.error.toString(), onRetry: _refresh);
+            return _ErrorState(
+              message: snapshot.error.toString(),
+              onRetry: _refresh,
+            );
           }
 
           final mistakes = snapshot.data ?? [];
@@ -64,7 +67,11 @@ class _ReviewMistakesScreenState extends State<ReviewMistakesScreen> {
                 padding: const EdgeInsets.all(24),
                 children: const [
                   SizedBox(height: 120),
-                  Icon(Icons.check_circle_outline, size: 56, color: Colors.green),
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 56,
+                    color: Colors.green,
+                  ),
                   SizedBox(height: 16),
                   Text(
                     'No mistakes to review',

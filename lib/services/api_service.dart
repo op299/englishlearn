@@ -1,5 +1,6 @@
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.2:8000/api/v1';
+  static const String baseUrl =
+      'https://my-python-backend-euti.onrender.com/api/v1';
 
   // Auth endpoints
   static const String registerEndpoint = '$baseUrl/auth/register';
