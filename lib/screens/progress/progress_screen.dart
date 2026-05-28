@@ -1,11 +1,14 @@
 import 'dart:math' as math;
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
+import '../../routes/app_router.dart';
 import '../../services/app_refresh_service.dart';
 import '../../services/user_service.dart';
 import '../lessons/review_mistakes_screen.dart';
 
+@RoutePage()
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
 
@@ -67,8 +70,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: FutureBuilder<_ProgressData>(
           future: _progressFuture,
@@ -90,14 +94,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
                 children: [
-                  _Header(profile: data.profile),
                   const SizedBox(height: 32),
                   const Text(
                     'WORDS MASTERED',
                     style: TextStyle(
                       letterSpacing: 3,
                       fontSize: 13,
-                      color: Color(0xFF55555B),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -108,18 +110,17 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       Flexible(
                         child: Text(
                           _formatNumber(data.summary.wordsMastered),
-                          style: const TextStyle(
-                            fontSize: 56,
-                            height: 0.9,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF111111),
-                          ),
+                          style: Theme.of(context).textTheme.displaySmall
+                              ?.copyWith(
+                                height: 0.9,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                         ),
                       ),
                       const SizedBox(width: 10),
-                      const Icon(
+                      Icon(
                         Icons.star,
-                        color: Color(0xFF0D67FF),
+                        color: Theme.of(context).colorScheme.primary,
                         size: 28,
                       ),
                     ],
@@ -127,9 +128,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   const SizedBox(height: 8),
                   Text(
                     '+${data.summary.wordsMasteredSinceYesterday} since yesterday',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF55555B),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -157,13 +157,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   const SizedBox(height: 28),
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'REVIEW QUEUE',
                           style: TextStyle(
                             letterSpacing: 3,
                             fontSize: 13,
-                            color: Color(0xFF55555B),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -179,11 +178,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         },
                         child: Text(
                           '${data.reviewTotal}',
-                          style: const TextStyle(
-                            color: Color(0xFF0D67FF),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                         ),
                       ),
                     ],
@@ -222,71 +220,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
-  final UserProfileDto profile;
-
-  const _Header({required this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.menu, color: Color(0xFF0D67FF), size: 28),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'LexiRise',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF070D22),
-              ),
-            ),
-          ),
-          _Avatar(profile: profile),
-        ],
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  final UserProfileDto profile;
-
-  const _Avatar({required this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    final avatarUrl = profile.avatarUrl;
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2A),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.black87),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: avatarUrl == null || avatarUrl.isEmpty
-          ? Center(
-              child: Text(
-                _initials(profile.fullName),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            )
-          : Image.network(avatarUrl, fit: BoxFit.cover),
-    );
-  }
-}
-
 class _ActivityPanel extends StatelessWidget {
   final ProgressSummaryDto summary;
   final UserProfileDto profile;
@@ -295,6 +228,8 @@ class _ActivityPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final tier = _tierProgress(profile.totalXp);
     final activity = summary.activity.take(7).toList();
     return _OutlinedPanel(
@@ -304,23 +239,19 @@ class _ActivityPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Activity',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black,
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ),
               Text(
                 (summary.ranking.isEmpty ? profile.tier : summary.ranking)
                     .toUpperCase(),
-                style: const TextStyle(
-                  color: Color(0xFF0D67FF),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
+                style: textTheme.labelLarge?.copyWith(
+                  color: colorScheme.primary,
                 ),
               ),
             ],
@@ -346,15 +277,14 @@ class _ActivityPanel extends StatelessWidget {
           LinearProgressIndicator(
             value: tier.progress,
             minHeight: 8,
-            backgroundColor: Colors.grey.shade100,
-            color: const Color(0xFF0D67FF),
+            backgroundColor: colorScheme.surfaceVariant,
+            color: colorScheme.primary,
           ),
           const SizedBox(height: 12),
           Text(
             tier.label,
-            style: const TextStyle(
-              color: Color(0xFF55555B),
-              fontWeight: FontWeight.w700,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -371,26 +301,23 @@ class _ActivityNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             _formatNumber(value),
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF070D22),
+            style: textTheme.displaySmall?.copyWith(
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFF77777D),
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1,
+            style: textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -407,6 +334,7 @@ class _ActivityBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final height = maxXp <= 0 ? 8.0 : 8 + (day.xp / maxXp * 52);
     return Expanded(
       child: Column(
@@ -415,12 +343,14 @@ class _ActivityBar extends StatelessWidget {
           Container(
             width: 18,
             height: height,
-            color: day.xp > 0 ? const Color(0xFF0D67FF) : Colors.grey.shade200,
+            color: day.xp > 0
+                ? colorScheme.primary
+                : colorScheme.surfaceVariant,
           ),
           const SizedBox(height: 8),
           Text(
             day.weekday.isEmpty ? '-' : day.weekday.substring(0, 1),
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+            style: Theme.of(context).textTheme.labelSmall,
           ),
         ],
       ),
@@ -441,30 +371,27 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return _OutlinedPanel(
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF0D67FF), size: 26),
+          Icon(icon, color: colorScheme.primary, size: 26),
           const SizedBox(height: 16),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 28,
+            style: textTheme.headlineSmall?.copyWith(
               height: 1,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF070D22),
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(
-              letterSpacing: 1,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF55555B),
+            style: textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -502,6 +429,8 @@ class _ReviewRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final title = item.review.topicTitle.isNotEmpty
         ? item.review.topicTitle
         : item.review.lessonId;
@@ -509,16 +438,18 @@ class _ReviewRow extends StatelessWidget {
 
     return InkWell(
       onTap: () {
-        Navigator.pushNamed(
-          context,
-          '/quiz/${item.review.lessonId}/${math.max(1, order)}',
+        context.router.push(
+          QuizRoute(
+            lessonId: item.review.lessonId,
+            lessonOrder: math.max(1, order),
+          ),
         );
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         child: Row(
           children: [
-            Container(width: 10, height: 10, color: const Color(0xFF0D67FF)),
+            Container(width: 10, height: 10, color: colorScheme.primary),
             const SizedBox(width: 18),
             Expanded(
               child: Column(
@@ -528,24 +459,21 @@ class _ReviewRow extends StatelessWidget {
                     order > 0 ? '$title - Lesson $order' : title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF070D22),
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${item.review.accuracy.round()}% accuracy',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Color(0xFF55555B),
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Color(0xFF77777D)),
+            Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
           ],
         ),
       ),
@@ -582,13 +510,15 @@ class _MilestoneRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Icon(
             item.isHighlighted ? Icons.workspace_premium : Icons.check_circle,
-            color: const Color(0xFF0D67FF),
+            color: colorScheme.primary,
             size: 22,
           ),
           const SizedBox(width: 12),
@@ -600,9 +530,8 @@ class _MilestoneRow extends StatelessWidget {
                   item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -610,9 +539,8 @@ class _MilestoneRow extends StatelessWidget {
                   item.description,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF55555B),
-                    fontSize: 13,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -631,6 +559,7 @@ class _DailyGoalPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final goalXp = math.max(1, summary.dailyGoalMinutes * 30);
     final progress = (summary.todayXp / goalXp).clamp(0.0, 1.0).toDouble();
     return _OutlinedPanel(
@@ -639,18 +568,18 @@ class _DailyGoalPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Daily Goal',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
               Text(
                 '${summary.todayXp} / $goalXp XP',
-                style: const TextStyle(
-                  color: Color(0xFF0D67FF),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],
@@ -659,13 +588,15 @@ class _DailyGoalPanel extends StatelessWidget {
           LinearProgressIndicator(
             value: progress,
             minHeight: 6,
-            color: const Color(0xFF0D67FF),
-            backgroundColor: Colors.grey.shade100,
+            color: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
           ),
           const SizedBox(height: 10),
           Text(
             '${summary.todayCompletedLessons} / ${math.max(1, summary.dailyGoalTargetLessons)} lessons completed',
-            style: const TextStyle(color: Color(0xFF55555B), fontSize: 13),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -684,12 +615,13 @@ class _OutlinedPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        color: colorScheme.surface,
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: child,
     );
@@ -704,16 +636,23 @@ class _EmptyPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
     return _OutlinedPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+            style: textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
           ),
           const SizedBox(height: 8),
-          Text(subtitle, style: const TextStyle(color: Color(0xFF55555B))),
+          Text(
+            subtitle,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );
@@ -734,9 +673,17 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             const SizedBox(height: 16),
             ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
           ],

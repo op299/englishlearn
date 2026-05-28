@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
+import '../../routes/app_router.dart';
 import '../../services/app_refresh_service.dart';
 import '../../services/user_service.dart';
-import '../explore/explore_screen.dart';
-import '../lessons/quiz_screen.dart';
 
+@RoutePage()
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -116,17 +117,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ExploreScreen()),
-          );
+          context.router.push(const ExploreRoute());
         },
-        backgroundColor: const Color(0xFF0D67FF),
+        backgroundColor: colorScheme.primary,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(Icons.add, color: colorScheme.onPrimary),
       ),
       body: SafeArea(
         child: _isLoading && _cachedData == null
@@ -146,8 +145,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
         children: [
-          _Header(profile: data.profile),
-          const SizedBox(height: 20),
           _DailyGoalCard(dashboard: data.dashboard),
           const SizedBox(height: 24),
           _SectionHeader(title: "TODAY'S MISSION", trailing: _todayLabel()),
@@ -173,13 +170,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   mission: mission,
                   onTap: () {
                     if (mission.lessonId.isEmpty) return;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => QuizScreen(
-                          lessonId: mission.lessonId,
-                          lessonOrder: mission.lessonOrder,
-                        ),
+                    context.router.push(
+                      QuizRoute(
+                        lessonId: mission.lessonId,
+                        lessonOrder: mission.lessonOrder,
                       ),
                     );
                   },
@@ -216,67 +210,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 }
 
-class _Header extends StatelessWidget {
-  final UserProfileDto profile;
-
-  const _Header({required this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.bolt, color: Color(0xFF0D67FF), size: 28),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'LexiRise',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF070D22),
-              ),
-            ),
-          ),
-          _Avatar(profile: profile),
-        ],
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  final UserProfileDto profile;
-
-  const _Avatar({required this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    final avatarUrl = profile.avatarUrl;
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black87),
-        color: Colors.grey.shade100,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: avatarUrl == null || avatarUrl.isEmpty
-          ? Center(
-              child: Text(
-                _initials(profile.fullName),
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            )
-          : Image.network(avatarUrl, fit: BoxFit.cover),
-    );
-  }
-}
-
 class _DailyGoalCard extends StatelessWidget {
   final DashboardDto dashboard;
 
@@ -304,31 +237,24 @@ class _DailyGoalCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'DAILY GOAL',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                    color: Color(0xFF5E5E64),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '$percent% Complete',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    height: 1,
-                    color: Color(0xFF070D22),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '$todayXp/$goalXp XP earned',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF55555B),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -343,15 +269,13 @@ class _DailyGoalCard extends StatelessWidget {
                 CircularProgressIndicator(
                   value: progress,
                   strokeWidth: 6,
-                  backgroundColor: Colors.grey.shade200,
-                  color: const Color(0xFF0D67FF),
+                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 Text(
                   '$completedUnits/$targetUnits',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF0D67FF),
-                    fontWeight: FontWeight.w800,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],
@@ -371,6 +295,8 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       children: [
         Row(
@@ -378,25 +304,21 @@ class _SectionHeader extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.black,
+                style: textTheme.titleLarge?.copyWith(
+                  color: colorScheme.onSurface,
                 ),
               ),
             ),
             Text(
               trailing,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF4E4E55),
-                fontWeight: FontWeight.w600,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        Container(height: 1, color: Colors.black),
+        Container(height: 1, color: colorScheme.outline),
       ],
     );
   }
@@ -410,6 +332,8 @@ class _MissionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final totalQuestions = math.max(1, mission.totalQuestions);
     final completedQuestions = mission.completedQuestions;
     final progress = mission.progressPercent > 0
@@ -430,12 +354,18 @@ class _MissionCard extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: isPrimary ? const Color(0xFF0D67FF) : Colors.white,
-                    border: isPrimary ? null : Border.all(color: Colors.black),
+                    color: isPrimary
+                        ? colorScheme.primary
+                        : colorScheme.surface,
+                    border: isPrimary
+                        ? null
+                        : Border.all(color: colorScheme.onSurface),
                   ),
                   child: Icon(
                     isPrimary ? Icons.menu_book : Icons.school,
-                    color: isPrimary ? Colors.white : const Color(0xFF070D22),
+                    color: isPrimary
+                        ? colorScheme.onPrimary
+                        : colorScheme.onSurface,
                     size: 22,
                   ),
                 ),
@@ -446,17 +376,15 @@ class _MissionCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   color: isPrimary
-                      ? const Color(0xFFEAF1FF)
-                      : const Color(0xFFF0F0F0),
+                      ? colorScheme.primaryContainer
+                      : colorScheme.surfaceVariant,
                   child: Text(
                     (mission.label.isEmpty ? mission.category : mission.label)
                         .toUpperCase(),
-                    style: TextStyle(
+                    style: textTheme.labelSmall?.copyWith(
                       color: isPrimary
-                          ? const Color(0xFF0D67FF)
-                          : Colors.black54,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 11,
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -467,10 +395,8 @@ class _MissionCard extends StatelessWidget {
               mission.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF070D22),
+              style: textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 4),
@@ -480,10 +406,9 @@ class _MissionCard extends StatelessWidget {
                   : mission.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 15,
+              style: textTheme.bodySmall?.copyWith(
                 height: 1.3,
-                color: Color(0xFF66666B),
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
@@ -493,17 +418,15 @@ class _MissionCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 6,
-                    backgroundColor: Colors.grey.shade100,
-                    color: const Color(0xFF0D67FF),
+                    backgroundColor: colorScheme.surfaceVariant,
+                    color: colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   '$completedQuestions/$totalQuestions',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF070D22),
+                  style: textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -528,30 +451,27 @@ class _MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return _OutlinedPanel(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF071126), size: 20),
+          Icon(icon, color: colorScheme.onSurface, size: 20),
           const SizedBox(height: 14),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 22,
+            style: textTheme.headlineSmall?.copyWith(
               height: 1,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF070D22),
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1,
-              color: Color(0xFF4A4A52),
+            style: textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -571,12 +491,13 @@ class _OutlinedPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        color: colorScheme.surface,
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: child,
     );
@@ -591,16 +512,23 @@ class _EmptyPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return _OutlinedPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            style: textTheme.titleLarge?.copyWith(color: colorScheme.onSurface),
           ),
           const SizedBox(height: 8),
-          Text(subtitle, style: const TextStyle(color: Color(0xFF66666B))),
+          Text(
+            subtitle,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );

@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
+import '../../routes/app_router.dart';
 import '../../services/learning_service.dart';
-import '../lessons/lessons_list_screen.dart';
 
+@RoutePage()
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
 
@@ -182,24 +184,27 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
+        decoration: BoxDecoration(
+          border: Border.all(color: colorScheme.outlineVariant),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               value,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(color: colorScheme.onSurface),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 9,
-                color: Colors.black54,
-                fontWeight: FontWeight.w800,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -264,12 +269,8 @@ class _TopicCard extends StatelessWidget {
       elevation: 1,
       child: InkWell(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  LessonsListScreen(topicId: topic.id, topicTitle: topic.title),
-            ),
+          context.router.push(
+            LessonsListRoute(topicId: topic.id, topicTitle: topic.title),
           );
         },
         child: Padding(
@@ -283,15 +284,14 @@ class _TopicCard extends StatelessWidget {
                     topic.category == 'Grammar'
                         ? Icons.school_outlined
                         : Icons.menu_book_outlined,
-                    color: Colors.blue,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 18,
                   ),
                   const Spacer(),
                   Text(
                     topic.level,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -301,18 +301,25 @@ class _TopicCard extends StatelessWidget {
                 topic.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w800,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const Spacer(),
               Text(
                 '${topic.completedLessons}/${topic.lessonCount} lessons',
-                style: const TextStyle(color: Colors.black54, fontSize: 11),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 6),
-              LinearProgressIndicator(value: progress, minHeight: 4),
+              LinearProgressIndicator(
+                value: progress,
+                minHeight: 4,
+                backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ],
           ),
         ),
@@ -333,9 +340,17 @@ class _ErrorPanel extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          Icon(
+            Icons.error_outline,
+            color: Theme.of(context).colorScheme.error,
+            size: 48,
+          ),
           const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 12),
           ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
         ],

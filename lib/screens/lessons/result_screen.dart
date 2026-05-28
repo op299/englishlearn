@@ -1,26 +1,23 @@
 import 'dart:math' as math;
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/learning_service.dart';
+import '../../services/result_data_service.dart';
 import 'review_mistakes_screen.dart';
 
+@RoutePage()
 class ResultScreen extends StatefulWidget {
-  final LessonSubmitResultDto result;
-  final double accuracy;
-  final int timeSpentSeconds;
+  @PathParam('lessonId')
   final String lessonId;
+  @PathParam('lessonOrder')
   final int lessonOrder;
-  final String lessonTitle;
 
   const ResultScreen({
     super.key,
-    required this.result,
-    required this.accuracy,
-    required this.timeSpentSeconds,
     required this.lessonId,
     required this.lessonOrder,
-    required this.lessonTitle,
   });
 
   @override
@@ -32,10 +29,22 @@ class _ResultScreenState extends State<ResultScreen>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
+  late final LessonSubmitResultDto _result;
+  late final double _accuracy;
+  late final int _timeSpentSeconds;
+  late final String _lessonTitle;
 
   @override
   void initState() {
     super.initState();
+
+    // Retrieve result data from service
+    final service = ResultDataService();
+    _result = service.result!;
+    _accuracy = service.accuracy!;
+    _timeSpentSeconds = service.timeSpentSeconds!;
+    _lessonTitle = service.lessonTitle!;
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 650),
       vsync: this,
@@ -59,12 +68,12 @@ class _ResultScreenState extends State<ResultScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final timeMinutes = widget.timeSpentSeconds <= 0
+    final timeMinutes = _timeSpentSeconds <= 0
         ? 0
-        : (widget.timeSpentSeconds / 60).ceil();
+        : (_timeSpentSeconds / 60).ceil();
     final lessonLabel = widget.lessonOrder > 0
-        ? '${widget.lessonTitle}: Module ${widget.lessonOrder.toString().padLeft(2, '0')}'
-        : widget.lessonTitle;
+        ? '$_lessonTitle: Module ${widget.lessonOrder.toString().padLeft(2, '0')}'
+        : _lessonTitle;
 
     return PopScope(
       canPop: false,
@@ -73,8 +82,11 @@ class _ResultScreenState extends State<ResultScreen>
           title: const Text('Lesson Complete'),
           leading: IconButton(
             icon: const Icon(Icons.home_outlined),
-            onPressed: () =>
-                Navigator.of(context).popUntil((route) => route.isFirst),
+            onPressed: () {
+              // Pop back through the navigation stack to return to home
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
           ),
           actions: [
             TextButton.icon(
@@ -92,7 +104,7 @@ class _ResultScreenState extends State<ResultScreen>
               children: [
                 ScaleTransition(
                   scale: _scaleAnimation,
-                  child: _Badge(accuracy: widget.accuracy),
+                  child: _Badge(accuracy: _accuracy),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -108,7 +120,7 @@ class _ResultScreenState extends State<ResultScreen>
                     Expanded(
                       child: _ResultMetric(
                         label: 'Accuracy',
-                        value: widget.accuracy.round().toString(),
+                        value: _accuracy.round().toString(),
                         suffix: '%',
                         colorScheme: colorScheme,
                       ),
@@ -126,22 +138,24 @@ class _ResultScreenState extends State<ResultScreen>
                 ),
                 const SizedBox(height: 20),
                 _StreakSection(
-                  currentStreak: widget.result.currentStreak,
-                  ranking: widget.result.ranking,
+                  currentStreak: _result.currentStreak,
+                  ranking: _result.ranking,
                   colorScheme: colorScheme,
                   theme: theme,
                 ),
                 const SizedBox(height: 20),
                 _RewardPanel(
-                  result: widget.result,
-                  accuracy: widget.accuracy,
+                  result: _result,
+                  accuracy: _accuracy,
                   colorScheme: colorScheme,
                   theme: theme,
                 ),
                 const SizedBox(height: 24),
                 FilledButton.icon(
-                  onPressed: () =>
-                      Navigator.of(context).popUntil((route) => route.isFirst),
+                  onPressed: () {
+                    // Pop ResultScreen and return to previous screen
+                    Navigator.pop(context);
+                  },
                   icon: const Icon(Icons.check, size: 20),
                   label: const Text('Continue'),
                   style: FilledButton.styleFrom(
@@ -166,7 +180,7 @@ class _ResultScreenState extends State<ResultScreen>
   }
 
   void _reviewLesson() {
-    Navigator.pushReplacement(
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ReviewMistakesScreen(lessonId: widget.lessonId),

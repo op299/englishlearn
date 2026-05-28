@@ -1,9 +1,13 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import '../../routes/app_router.dart';
 import '../../services/learning_service.dart';
-import 'quiz_screen.dart';
 
+@RoutePage()
 class LessonsListScreen extends StatefulWidget {
+  @PathParam('topicId')
   final String topicId;
+  @PathParam('topicTitle')
   final String topicTitle;
 
   const LessonsListScreen({
@@ -43,7 +47,7 @@ class _LessonsListScreenState extends State<LessonsListScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const Icon(Icons.error_outline, size: 48, color: null),
                   const SizedBox(height: 16),
                   Text('Error: ${snapshot.error}', textAlign: TextAlign.center),
                   const SizedBox(height: 16),
@@ -88,8 +92,12 @@ class _LessonsListScreenState extends State<LessonsListScreen> {
           height: 50,
           decoration: BoxDecoration(
             color: lesson.completed
-                ? Colors.green.withValues(alpha: 0.2)
-                : Colors.blue.withValues(alpha: 0.2),
+                ? Theme.of(
+                    context,
+                  ).colorScheme.secondaryContainer.withValues(alpha: 0.2)
+                : Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Center(
@@ -102,7 +110,11 @@ class _LessonsListScreenState extends State<LessonsListScreen> {
         title: Text('Lesson ${lesson.order}'),
         subtitle: Row(
           children: [
-            Icon(Icons.star, size: 16, color: Colors.amber),
+            Icon(
+              Icons.star,
+              size: 16,
+              color: Theme.of(context).colorScheme.tertiary,
+            ),
             const SizedBox(width: 4),
             Text('${lesson.xpReward} XP'),
             const SizedBox(width: 16),
@@ -110,7 +122,7 @@ class _LessonsListScreenState extends State<LessonsListScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.green,
+                  color: Theme.of(context).colorScheme.secondary,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
@@ -122,12 +134,8 @@ class _LessonsListScreenState extends State<LessonsListScreen> {
         ),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  QuizScreen(lessonId: lesson.id, lessonOrder: lesson.order),
-            ),
+          context.router.push(
+            QuizRoute(lessonId: lesson.id, lessonOrder: lesson.order),
           );
         },
       ),

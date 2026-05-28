@@ -1,9 +1,13 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
+import '../../routes/app_router.dart';
 import '../../services/auth_service.dart';
 import '../../utils/validators.dart';
 
+@RoutePage()
 class ResetPasswordScreen extends StatefulWidget {
+  @QueryParam('token')
   final String token;
 
   const ResetPasswordScreen({super.key, required this.token});
@@ -55,7 +59,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       });
       Future.delayed(const Duration(seconds: 1), () {
         if (!mounted) return;
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        context.router.replaceAll([const LoginRoute()]);
       });
     } catch (e) {
       if (!mounted) return;
@@ -143,11 +147,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _success ? Colors.green.shade50 : Colors.red.shade50,
+                    color: _success
+                        ? Theme.of(context).colorScheme.secondaryContainer
+                        : Theme.of(context).colorScheme.errorContainer,
                     border: Border.all(
                       color: _success
-                          ? Colors.green.shade200
-                          : Colors.red.shade200,
+                          ? Theme.of(context).colorScheme.secondary
+                          : Theme.of(context).colorScheme.error,
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -155,8 +161,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     _message!,
                     style: TextStyle(
                       color: _success
-                          ? Colors.green.shade700
-                          : Colors.red.shade700,
+                          ? Theme.of(context).colorScheme.secondary
+                          : Theme.of(context).colorScheme.error,
                     ),
                   ),
                 ),
